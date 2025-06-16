@@ -80,6 +80,101 @@ BEGIN
 	CREATE TABLE dominio.rol (
 		ID_rol INT IDENTITY(1,1) PRIMARY KEY,
 		nombre_rol CHAR(15),
-	)
+	);
 END
+GO
 
+IF NOT EXISTS (
+    SELECT * 
+    FROM INFORMATION_SCHEMA.TABLES 
+    WHERE TABLE_NAME = 'rol_usuario' AND TABLE_SCHEMA = 'dominio'
+)
+BEGIN
+    CREATE TABLE dominio.rol_usuario (
+        ID_usuario INT,
+        ID_rol INT,
+        PRIMARY KEY (ID_usuario, ID_rol),
+        FOREIGN KEY (ID_usuario) REFERENCES dominio.usuario(ID_usuario),
+        FOREIGN KEY (ID_rol) REFERENCES dominio.rol(ID_rol)
+    );
+END
+GO
+
+
+IF NOT EXISTS (
+    SELECT * 
+    FROM INFORMATION_SCHEMA.TABLES 
+    WHERE TABLE_NAME = 'grupo_familiar' AND TABLE_SCHEMA = 'dominio'
+)
+BEGIN
+    CREATE TABLE dominio.grupo_familiar (
+        ID_grupo_familiar INT IDENTITY(1,1) PRIMARY KEY,
+        cantidad_integrantes INT
+    );
+END
+GO
+
+
+IF NOT EXISTS (
+    SELECT * 
+    FROM INFORMATION_SCHEMA.TABLES 
+    WHERE TABLE_NAME = 'socio' AND TABLE_SCHEMA = 'dominio'
+)
+BEGIN
+	CREATE TABLE dominio.socio (
+		ID_socio INT IDENTITY(1,1) PRIMARY KEY,
+		nombre VARCHAR(20),
+		apellido VARCHAR(20),
+		fecha_nacimiento DATE, 
+		DNI CHAR(8) CHECK( CAST(DNI AS INT) > 0 AND CAST(DNI AS INT) <= 99999999 ),
+		telefono CHAR(10),
+		telefono_de_emergencia VARCHAR(23),
+		obra_social VARCHAR(30),
+		nro_obra_social VARCHAR(30),
+		categoria_socio CHAR(10),
+		es_responsable BIT, -- true si puede tener a cargo menores y es repsonsable de un grupo fliar
+		email VARCHAR(30),
+		id_grupo_familiar INT,
+		id_responsable_a_cargo INT, -- FK autoreferenciada
+		CONSTRAINT FK_Socio_Responsable FOREIGN KEY (id_responsable_a_cargo)
+			REFERENCES dominio.socio(ID_socio),
+		CONSTRAINT FK_id_grupo_familiar FOREIGN KEY (id_grupo_familiar) REFERENCES dominio.grupo_familiar(ID_grupo_familiar)
+	);
+END
+GO
+
+
+IF NOT EXISTS (
+    SELECT * 
+    FROM INFORMATION_SCHEMA.TABLES 
+    WHERE TABLE_NAME = 'actividad' AND TABLE_SCHEMA = 'dominio'
+)
+BEGIN
+    CREATE TABLE dominio.actividad (
+        ID_actividad INT IDENTITY(1,1) PRIMARY KEY,
+        nombre_actividad CHAR(15),
+		costo_mensual DECIMAL(8,2),
+		edad_minima INT,
+		edad_maxima INT,
+		CONSTRAINT CK_edades_validas CHECK (edad_minima <= edad_maxima)
+    );
+END
+GO
+
+IF NOT EXISTS (
+    SELECT * 
+    FROM INFORMATION_SCHEMA.TABLES 
+    WHERE TABLE_NAME = 'horario_de_actividad' AND TABLE_SCHEMA = 'dominio'
+)
+BEGIN
+    CREATE TABLE dominio.horario_de_actividad (
+        ID_horario INT IDENTITY(1,1) PRIMARY KEY,
+        dia CHAR(10),
+		hora_inicio TIME,
+		hora_fin TIME,
+		id_actividad INT,
+		FOREIGN KEY (id_actividad) REFERENCES dominio.actividad(ID_actividad),
+		CONSTRAINT CK_horarios_validos CHECK (hora_inicio <= hora_fin)
+    );
+END
+GO

@@ -303,3 +303,114 @@ BEGIN
 	);
 END
 GO
+
+IF NOT EXISTS (
+    SELECT * 
+    FROM INFORMATION_SCHEMA.TABLES 
+    WHERE TABLE_NAME = 'detalle_factura' AND TABLE_SCHEMA = 'dominio'
+)
+BEGIN
+	CREATE TABLE dominio.detalle_factura(
+		ID_detalle_factura INT IDENTITY(1,1) PRIMARY KEY,
+		descripcion VARCHAR (70),
+		cantidad INT DEFAULT 1,
+		subtotal DECIMAL (10,2),
+		id_factura INT NOT NULL
+		CONSTRAINT FK_id_factura FOREIGN KEY (id_factura) 
+			REFERENCES dominio.factura(ID_factura),
+	);
+END
+GO
+
+IF NOT EXISTS (
+    SELECT * 
+    FROM INFORMATION_SCHEMA.TABLES 
+    WHERE TABLE_NAME = 'descuento' AND TABLE_SCHEMA = 'dominio'
+)
+BEGIN
+	CREATE TABLE dominio.descuento(
+		ID_descuento INT IDENTITY(1,1) PRIMARY KEY,
+		descripcion VARCHAR (70),
+		tipo_descuento CHAR(30),
+		porcentaje DECIMAL (3,2), -- 0,06 0,90 0,50 y así tomaran los valores
+		id_detalle_factura INT NOT NULL
+		CONSTRAINT FK_id_detalle_factura FOREIGN KEY (id_detalle_factura) 
+			REFERENCES dominio.detalle_factura(ID_detalle_factura),
+	);
+END
+GO
+
+IF NOT EXISTS (
+    SELECT * 
+    FROM INFORMATION_SCHEMA.TABLES 
+    WHERE TABLE_NAME = 'pago' AND TABLE_SCHEMA = 'dominio'
+)
+BEGIN
+	CREATE TABLE dominio.pago(
+		ID_pago INT IDENTITY(1,1) PRIMARY KEY,
+		fecha_pago DATETIME,
+		medio_de_pago CHAR(30),
+		monto DECIMAL (8,2), 
+		estado CHAR (10), --'Pagado' 'No Pagado'
+		id_factura INT NOT NULL
+		CONSTRAINT FK_id_factura_pago FOREIGN KEY (id_factura) 
+			REFERENCES dominio.factura(ID_factura),
+	);
+END
+GO
+
+IF NOT EXISTS (
+    SELECT * 
+    FROM INFORMATION_SCHEMA.TABLES 
+    WHERE TABLE_NAME = 'reembolso' AND TABLE_SCHEMA = 'dominio'
+)
+BEGIN
+	CREATE TABLE dominio.reembolso (
+		ID_reembolso INT IDENTITY(1,1) PRIMARY KEY,
+		fecha_reembolso DATETIME,
+		motivo_reembolso CHAR(30),
+		monto DECIMAL (8,2), 
+		id_factura INT NOT NULL
+		CONSTRAINT FK_id_factura_reembolso FOREIGN KEY (id_factura) 
+			REFERENCES dominio.factura(ID_factura),
+	);
+END
+GO
+
+IF NOT EXISTS (
+    SELECT * 
+    FROM INFORMATION_SCHEMA.TABLES 
+    WHERE TABLE_NAME = 'deuda' AND TABLE_SCHEMA = 'dominio'
+)
+BEGIN
+	CREATE TABLE dominio.deuda(
+		ID_deuda INT IDENTITY(1,1) PRIMARY KEY,
+		recargo_por_vencimiento DECIMAL (3,2),
+		deuda_acumulada DECIMAL (10,2),
+		fecha_readmision DATE,
+		id_factura INT NOT NULL,
+		id_socio INT NOT NULL,
+		CONSTRAINT FK_id_factura_deuda FOREIGN KEY (id_factura) 
+			REFERENCES dominio.factura(ID_factura),
+		CONSTRAINT FK_id_socio_deuda FOREIGN KEY (id_socio)
+			REFERENCES dominio.socio(ID_socio)
+	);
+END
+GO
+
+
+IF NOT EXISTS (
+    SELECT * 
+    FROM INFORMATION_SCHEMA.TABLES 
+    WHERE TABLE_NAME = 'detalle_factura_actividad' AND TABLE_SCHEMA = 'dominio'
+)
+BEGIN
+    CREATE TABLE dominio.detalle_factura_actividad (
+        ID_detalle_factura INT,
+        ID_actividad INT,
+        PRIMARY KEY (ID_detalle_factura, ID_actividad),
+        FOREIGN KEY (ID_detalle_factura) REFERENCES dominio.detalle_factura(ID_detalle_factura),
+        FOREIGN KEY (ID_actividad) REFERENCES dominio.actividad(ID_actividad)
+    );
+END
+GO

@@ -4,3 +4,4 @@ Repositorio de desarrollo para el trabajo práctico para la materia Bases de Dat
 # Integrantes del grupo (Nombre Apellido - Nick de GitHub):
 Catania Nicolas - nicolascatania.  
 Fuente Leonel - fuenteleonel.
+Mariño Ignacio - IMarino1402

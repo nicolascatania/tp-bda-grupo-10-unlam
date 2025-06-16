@@ -178,3 +178,128 @@ BEGIN
     );
 END
 GO
+
+IF NOT EXISTS (
+    SELECT * 
+    FROM INFORMATION_SCHEMA.TABLES 
+    WHERE TABLE_NAME = 'factura' AND TABLE_SCHEMA = 'dominio'
+)
+BEGIN
+    CREATE TABLE dominio.factura (
+        ID_factura INT IDENTITY(1,1) PRIMARY KEY,
+        nro_factura VARCHAR(20), 
+		tipo_factura CHAR(20),
+		fecha_emision DATETIME,
+		CAE CHAR(14), 
+		estado CHAR(9), --estado de mayor longitud PENDIENTE -> 9 caracteres, el otro es Pagada
+		importe_total DECIMAL(8,2),
+		razon_social_emisor CHAR(20),
+		CUIT_emisor INT, 
+		vencimiento_CAE DATETIME,
+		id_socio INT
+		FOREIGN KEY (id_socio) REFERENCES dominio.socio(ID_socio) 
+    );
+END
+GO
+
+IF NOT EXISTS (
+    SELECT * 
+    FROM INFORMATION_SCHEMA.TABLES 
+    WHERE TABLE_NAME = 'inscripcion_actividad' AND TABLE_SCHEMA = 'dominio'
+)
+BEGIN
+	CREATE TABLE dominio.inscripcion_actividad (
+		ID_inscripcion INT IDENTITY(1,1) PRIMARY KEY,
+		fecha_inscripcion DATE,
+		id_actividad INT NOT NULL,
+		id_socio INT NOT NULL,
+		CONSTRAINT FK_id_socio_inscripcion FOREIGN KEY (id_socio) REFERENCES dominio.socio(ID_socio),
+		CONSTRAINT FK_id_actividad_inscripcion FOREIGN KEY (id_actividad) REFERENCES dominio.actividad(ID_actividad),
+	);
+END
+GO
+
+IF NOT EXISTS (
+    SELECT * 
+    FROM INFORMATION_SCHEMA.TABLES 
+    WHERE TABLE_NAME = 'asistencia' AND TABLE_SCHEMA = 'dominio'
+)
+BEGIN
+	CREATE TABLE dominio.asistencia (
+		ID_asistencia INT IDENTITY(1,1) PRIMARY KEY,
+		fecha DATE,
+		asistio BIT NOT NULL,
+		id_inscripcion_actividad INT NOT NULL,
+		CONSTRAINT FK_id_inscripcion_actividad FOREIGN KEY (id_inscripcion_actividad) 
+			REFERENCES dominio.actividad(ID_actividad),
+	);
+END
+GO
+
+
+IF NOT EXISTS (
+    SELECT * 
+    FROM INFORMATION_SCHEMA.TABLES 
+    WHERE TABLE_NAME = 'cuota_membresia' AND TABLE_SCHEMA = 'dominio'
+)
+BEGIN
+	CREATE TABLE dominio.cuota_membresia (
+		ID_cuota INT IDENTITY(1,1) PRIMARY KEY,
+		mes TINYINT NOT NULL CHECK (mes > 0 AND mes <= 12),
+		anio INT NOT NULL,
+		monto DECIMAL(8,2) NOT NULL,
+		nombre_membresia CHAR(9) NOT NULL, -- Individual es el nombre de mayor longitud de los posibles nombres
+		edad_minima INT,
+		edad_maxima INT,
+		id_socio INT NOT NULL,
+		CONSTRAINT FK_id_socio_cuota_membresia FOREIGN KEY (id_socio) 
+			REFERENCES dominio.socio(ID_socio),
+		CONSTRAINT CK_edades_validas_membresia CHECK (edad_minima <= edad_maxima)
+	);
+END
+GO
+
+
+
+
+
+IF NOT EXISTS (
+    SELECT * 
+    FROM INFORMATION_SCHEMA.TABLES 
+    WHERE TABLE_NAME = 'entrada_pileta' AND TABLE_SCHEMA = 'dominio'
+)
+BEGIN
+	CREATE TABLE dominio.entrada_pileta(
+		ID_entrada INT IDENTITY(1,1) PRIMARY KEY,
+		fecha_entrada DATETIME NOT NULL,
+		monto_socio DECIMAL(10,2),
+		monto_invitado DECIMAL(8,2),
+		tipo_entrada_pileta CHAR(8), -- Toma como valores socio o invitado 
+		fue_reembolsada BIT DEFAULT 0,
+		id_socio INT NOT NULL,
+		CONSTRAINT FK_id_socio FOREIGN KEY (id_socio) 
+			REFERENCES dominio.socio(ID_socio),
+	);
+END
+GO
+
+
+
+IF NOT EXISTS (
+    SELECT * 
+    FROM INFORMATION_SCHEMA.TABLES 
+    WHERE TABLE_NAME = 'reserva_sum' AND TABLE_SCHEMA = 'dominio'
+)
+BEGIN
+	CREATE TABLE dominio.reserva_sum(
+		ID_reserva INT IDENTITY(1,1) PRIMARY KEY,
+		fecha_reserva DATETIME NOT NULL,
+		hora_desde TIME NOT NULL,
+		hora_hasta TIME NOT NULL,
+		valor_hora DECIMAL(8,2),
+		id_socio INT NOT NULL,
+		CONSTRAINT FK_id_socio_reserva FOREIGN KEY (id_socio) 
+			REFERENCES dominio.socio(ID_socio),
+	);
+END
+GO

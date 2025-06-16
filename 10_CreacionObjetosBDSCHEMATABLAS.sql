@@ -15,6 +15,9 @@ GO
 USE Com2900G10;
 GO
 
+SET nocount ON;
+GO
+
 --Este esquema es para todos los elementos involucrados directamente en los procesos del sistema
 IF NOT EXISTS (
     SELECT * FROM sys.schemas WHERE name = 'dominio'
@@ -49,7 +52,7 @@ BEGIN
         contraseña VARCHAR(20) NOT NULL,
         fecha_modificacion_contraseña DATETIME,
         fecha_expiracion_contraseña DATETIME,
-        estado_usuario CHAR(15) DEFAULT 'activo',
+        estado_usuario CHAR(15) DEFAULT 'activo', --estados: activo, inactivo, adeuda
         CHECK (
             LEN(contraseña) >= 8 AND
             contraseña LIKE '%[0-9]%' AND        -- al menos un número
@@ -414,3 +417,290 @@ BEGIN
     );
 END
 GO
+
+
+--=====================================================CREACIONES DE SP PARA ABM DE CADA TABLA=====================================================--
+/**
+	El siguiente SP da de alta un usuario
+	Valida que la contraseña cumpla los requerimientos marcados en el check de la tabla usuario, para generar un raiserror con una indicación clara del motivo de falla
+	Valida que nombre de usuario sea único
+	Setea la fecha de creación de contraseña a hoy y la fecha de expiración a dentro de un año
+	Encripta la contraseña
+	@param	nombre_usuario indica el nombre de usuario a dar de alta
+	@param	contraseña	   indica la contraseña a ingresar		
+*/
+CREATE OR ALTER PROCEDURE dominio.alta_usuario
+    @nombre_usuario VARCHAR(20),
+    @contraseña VARCHAR(20)
+AS
+BEGIN
+	SET NOCOUNT ON;
+
+    IF LEN(@contraseña) < 8 OR 
+       @contraseña NOT LIKE '%[0-9]%' OR
+       @contraseña NOT LIKE '%[a-zA-Z]%' OR
+       (@contraseña NOT LIKE '%!%' AND
+        @contraseña NOT LIKE '%@%' AND
+        @contraseña NOT LIKE '%#%' AND
+        @contraseña NOT LIKE '%$%' AND
+        @contraseña NOT LIKE '%^%' AND
+        @contraseña NOT LIKE '%&%' AND
+        @contraseña NOT LIKE '%*%' AND
+        @contraseña NOT LIKE '%(%' AND
+        @contraseña NOT LIKE '%)%')
+    BEGIN
+        RAISERROR('La contraseña no cumple con los requisitos de seguridad', 16, 1)
+        RETURN
+    END
+
+    IF EXISTS (SELECT 1 FROM dominio.usuario WHERE nombre_usuario = @nombre_usuario)
+    BEGIN
+        RAISERROR('El nombre de usuario ya existe', 16, 1)
+        RETURN
+    END
+    INSERT INTO dominio.usuario (
+        nombre_usuario, 
+        contraseña, 
+        fecha_modificacion_contraseña, 
+        fecha_expiracion_contraseña,
+        estado_usuario
+    )
+    VALUES (
+        @nombre_usuario, 
+        @contraseña, 
+        GETDATE(),
+        DATEADD(YEAR, 1, GETDATE()),
+        'activo'
+    )
+    
+    PRINT 'Usuario creado exitosamente'
+END
+GO
+
+
+/**
+	Este SP borra un usuario de manera lógica (cambia estado a 'inactivo')
+	@param	ID_usuario indica el ID del usuario a dar de baja
+	@return 0 si éxito, -1 si error
+*/
+CREATE OR ALTER PROCEDURE dominio.baja_usuario
+    @ID_usuario INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    BEGIN TRY
+        IF NOT EXISTS (SELECT 1 FROM dominio.usuario WHERE ID_usuario = @ID_usuario)
+        BEGIN
+            RAISERROR('El usuario con ID %d no existe', 16, 1, @ID_usuario);
+            RETURN -1;
+        END
+        
+        IF EXISTS (SELECT 1 FROM dominio.usuario WHERE ID_usuario = @ID_usuario AND estado_usuario = 'inactivo')
+        BEGIN
+            RAISERROR('El usuario con ID %d ya está inactivo', 16, 1, @ID_usuario);
+            RETURN -1;
+        END
+        
+        UPDATE dominio.usuario 
+        SET estado_usuario = 'inactivo' WHERE ID_usuario = @ID_usuario;
+        
+        PRINT 'Usuario dado de baja exitosamente';
+        RETURN 0;
+    END TRY
+    BEGIN CATCH
+        DECLARE @ErrorMessage NVARCHAR(4000) = ERROR_MESSAGE();
+        RAISERROR('Error al dar de baja usuario: %s', 16, 1, @ErrorMessage);
+        RETURN -1;
+    END CATCH
+END
+GO
+
+
+/**
+    El siguiente SP modifica los datos de un usuario existente, puede ser el nombre de usuario o la contraseña
+    @param ID_usuario indica el ID del usuario a modificar (obligatorio para encontrar el usuario en cuestión, o terminar si no existe)
+    @param nuevo_nombre_usuario nuevo nombre de usuario (opcional), si se indica, se valida que no exista un nombre de usuario como el ingresado, mantenemos la unicidad de los nombres de usuario
+    @param nueva_contraseña nueva contraseña (opcional, debe cumplir requisitos) si se indica, se actualizan las fechas de modificado y vencimiento, además se realizan las validaciones correspondientes
+    @param nuevo_estado nuevo estado (opcional: 'activo'/'inactivo'/'adeuda')
+    @return 0 si éxito, -1 si error
+*/
+CREATE OR ALTER PROCEDURE dominio.modificar_usuario
+    @ID_usuario INT,
+    @nuevo_nombre_usuario VARCHAR(20) = NULL,
+    @nueva_contraseña VARCHAR(20) = NULL,
+    @nuevo_estado VARCHAR(15) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    BEGIN TRY
+        IF NOT EXISTS (SELECT 1 FROM dominio.usuario WHERE ID_usuario = @ID_usuario)
+        BEGIN
+            RAISERROR('El usuario con ID %d no existe', 16, 1, @ID_usuario);
+            RETURN -1;
+        END
+
+        IF @nuevo_nombre_usuario IS NOT NULL
+        BEGIN
+            IF EXISTS (SELECT 1 FROM dominio.usuario 
+                      WHERE nombre_usuario = @nuevo_nombre_usuario AND ID_usuario <> @ID_usuario)
+            BEGIN
+                RAISERROR('El nombre de usuario "%s" ya está en uso', 16, 1, @nuevo_nombre_usuario);
+                RETURN -1;
+            END
+            
+            UPDATE dominio.usuario 
+            SET nombre_usuario = @nuevo_nombre_usuario
+            WHERE ID_usuario = @ID_usuario;
+        END
+
+        IF @nueva_contraseña IS NOT NULL
+        BEGIN
+            IF LEN(@nueva_contraseña) < 8 OR 
+               @nueva_contraseña NOT LIKE '%[0-9]%' OR
+               @nueva_contraseña NOT LIKE '%[a-zA-Z]%' OR
+               @nueva_contraseña NOT LIKE '%[!@#$%^&*()]%'
+            BEGIN
+                RAISERROR('La contraseña debe tener al menos 8 caracteres, incluir números, letras y un caracter especial (!@#$%^&*)', 16, 1);
+                RETURN -1;
+            END
+            
+            UPDATE dominio.usuario 
+            SET contraseña = @nueva_contraseña,
+                fecha_modificacion_contraseña = GETDATE(),
+                fecha_expiracion_contraseña = DATEADD(YEAR, 1, GETDATE())
+            WHERE ID_usuario = @ID_usuario;
+        END
+
+        IF @nuevo_estado IS NOT NULL
+        BEGIN
+            IF @nuevo_estado NOT IN ('activo', 'inactivo', 'adeuda')
+            BEGIN
+                RAISERROR('Estado inválido. Valores permitidos: "activo", "inactivo" o "adeuda"', 16, 1);
+                RETURN -1;
+            END
+            
+            UPDATE dominio.usuario 
+            SET estado_usuario = @nuevo_estado
+            WHERE ID_usuario = @ID_usuario;
+        END
+
+        IF @nuevo_nombre_usuario IS NULL AND 
+           @nueva_contraseña IS NULL AND 
+           @nuevo_estado IS NULL
+        BEGIN
+            RAISERROR('No se proporcionaron datos para modificar', 16, 1);
+            RETURN -1;
+        END
+
+        PRINT 'Usuario modificado exitosamente';
+        RETURN 0;
+    END TRY
+    BEGIN CATCH
+        DECLARE @ErrorMessage NVARCHAR(4000) = ERROR_MESSAGE();
+        RAISERROR('Error al modificar usuario: %s', 16, 1, @ErrorMessage);
+        RETURN -1;
+    END CATCH
+END
+GO
+
+
+/**
+	Da de alta un nuevo rol
+	@param nombre_rol	nombre que indica el usuario para crear un nuevo rol
+*/
+CREATE OR ALTER PROCEDURE dominio.alta_rol
+    @nombre_rol VARCHAR(15)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    BEGIN TRY
+        IF LEN(TRIM(@nombre_rol)) = 0
+        BEGIN
+            RAISERROR('El nombre del rol no puede estar vacío', 16, 1);
+            RETURN -1;
+        END
+        
+        IF EXISTS (
+            SELECT 1 FROM dominio.rol 
+            WHERE nombre_rol = @nombre_rol
+        )
+        BEGIN
+            RAISERROR('El rol "%s" ya existe', 16, 1, @nombre_rol);
+            RETURN -1;
+        END
+        
+        INSERT INTO dominio.rol (nombre_rol)
+        VALUES (@nombre_rol);
+        
+        PRINT 'Rol creado exitosamente';
+        RETURN 0;
+    END TRY
+    BEGIN CATCH
+        DECLARE @ErrorMessage NVARCHAR(4000) = ERROR_MESSAGE();
+        RAISERROR('Error al crear rol: %s', 16, 1, @ErrorMessage);
+        RETURN -1;
+    END CATCH
+END
+GO
+
+/*
+	Modifica el nombre de rol en base a un id de rol dado
+	@param ID_rol			id para buscar en la tabla, si no existe, cancela la operación
+	@param nuevo_nombre_rol	indica el nuevo nombre a setear
+	@return 0 éxito, -1 error
+*/
+CREATE OR ALTER PROCEDURE dominio.modificar_rol
+    @ID_rol INT,
+    @nuevo_nombre_rol VARCHAR(15)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    BEGIN TRY
+        IF NOT EXISTS (SELECT 1 FROM dominio.rol WHERE ID_rol = @ID_rol)
+        BEGIN
+            RAISERROR('El rol con ID %d no existe', 16, 1, @ID_rol);
+            RETURN -1;
+        END
+
+        IF LEN(TRIM(@nuevo_nombre_rol)) = 0
+        BEGIN
+            RAISERROR('El nombre del rol no puede estar vacío', 16, 1);
+            RETURN -1;
+        END
+        
+        IF EXISTS (
+            SELECT 1 FROM dominio.rol 
+            WHERE nombre_rol = @nuevo_nombre_rol 
+            AND ID_rol <> @ID_rol
+        )
+        BEGIN
+            RAISERROR('El nombre de rol "%s" ya está en uso por otro rol', 16, 1, @nuevo_nombre_rol);
+            RETURN -1;
+        END
+
+        UPDATE dominio.rol 
+        SET nombre_rol = @nuevo_nombre_rol
+        WHERE ID_rol = @ID_rol;
+        
+        PRINT 'Rol modificado exitosamente';
+        RETURN 0;
+    END TRY
+    BEGIN CATCH
+        DECLARE @ErrorMessage NVARCHAR(4000) = ERROR_MESSAGE();
+        RAISERROR('Error al modificar rol: %s', 16, 1, @ErrorMessage);
+        RETURN -1;
+    END CATCH
+END
+GO
+
+/*
+	Consideramos que no es eficiente implementar una baja de rol, es preferible cambiar el nombre de ese rol
+	ya que rol se relaciona con usuario (N:N) generando la tabla rol_usuario, realizar una baja sería un problema en la lógica de negocios
+	Si tenemos muchos usuarios con el rol adeuda (que indica que tienen deudas y no han pagado), y por alguna razón le borramos el rol
+	esa persona no queda sin rol o le pone por default activo, concluimos que simplemente es mejor cambiar de nombre el rol por algún otro.
+	Además, creemos que no será una operación usada con frecuencia, sumando otro motivo para no realizarla.
+*/

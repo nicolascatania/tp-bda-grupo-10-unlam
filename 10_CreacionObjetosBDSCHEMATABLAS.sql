@@ -452,7 +452,7 @@ END;
 GO
 
 --Modificar inscripcion a una actividad
-CREATE PROCEDURE dominio.modificar_inscripcion_actividad
+CREATE OR ALTER PROCEDURE dominio.modificar_inscripcion_actividad
     @ID_inscripcion INT,
     @fecha_inscripcion DATE,
     @id_actividad INT,
@@ -468,7 +468,7 @@ END;
 GO
 
 -- Borra una inscripcion a una actividad
-CREATE PROCEDURE dominio.borrar_inscripcion_actividad
+CREATE OR ALTER PROCEDURE dominio.borrar_inscripcion_actividad
     @ID_inscripcion INT
 AS
 BEGIN
@@ -480,7 +480,7 @@ GO
 --ASISTENCIA
 
 --Inserta un registro de asistencia 
-CREATE PROCEDURE dominio.insertar_asistencia
+CREATE OR ALTER PROCEDURE dominio.insertar_asistencia
     @fecha DATE,
     @asistio BIT,
     @id_inscripcion_actividad INT = NULL
@@ -497,7 +497,7 @@ END;
 GO
 
 -- Modifica un registro de asistencia
-CREATE PROCEDURE dominio.modificar_asistencia
+CREATE OR ALTER PROCEDURE dominio.modificar_asistencia
     @ID_asistencia INT,
     @fecha DATE,
     @asistio BIT,
@@ -519,7 +519,7 @@ GO
 
 
 --Borrar un registro de asistencia 
-CREATE PROCEDURE dominio.borrar_asistencia
+CREATE OR ALTER PROCEDURE dominio.borrar_asistencia
     @ID_asistencia INT
 AS 
 BEGIN

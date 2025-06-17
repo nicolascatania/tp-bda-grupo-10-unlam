@@ -49,25 +49,25 @@ BEGIN
     CREATE TABLE dominio.usuario (
         ID_usuario INT IDENTITY(1,1) PRIMARY KEY ,
         nombre_usuario VARCHAR(20) NOT NULL,
-        contraseña VARCHAR(20) NOT NULL,
-        fecha_modificacion_contraseña DATETIME,
-        fecha_expiracion_contraseña DATETIME,
+        contrase�a VARCHAR(20) NOT NULL,
+        fecha_modificacion_contrase�a DATETIME,
+        fecha_expiracion_contrase�a DATETIME,
         estado_usuario CHAR(15) DEFAULT 'activo', --estados: activo, inactivo, adeuda
         CHECK (
-            LEN(contraseña) >= 8 AND
-            contraseña LIKE '%[0-9]%' AND        -- al menos un número
-            contraseña LIKE '%[a-zA-Z]%' AND     -- al menos una letra
+            LEN(contrase�a) >= 8 AND
+            contrase�a LIKE '%[0-9]%' AND        -- al menos un número
+            contrase�a LIKE '%[a-zA-Z]%' AND     -- al menos una letra
             (
 			-- para caracteres especiales
-                contraseña LIKE '%!%' OR
-                contraseña LIKE '%@%' OR
-                contraseña LIKE '%#%' OR
-                contraseña LIKE '%$%' OR
-                contraseña LIKE '%^%' OR
-                contraseña LIKE '%&%' OR
-                contraseña LIKE '%*%' OR
-                contraseña LIKE '%(%' OR
-                contraseña LIKE '%)%'
+                contrase�a LIKE '%!%' OR
+                contrase�a LIKE '%@%' OR
+                contrase�a LIKE '%#%' OR
+                contrase�a LIKE '%$%' OR
+                contrase�a LIKE '%^%' OR
+                contrase�a LIKE '%&%' OR
+                contrase�a LIKE '%*%' OR
+                contrase�a LIKE '%(%' OR
+                contrase�a LIKE '%)%'
             )
         )
     );
@@ -418,8 +418,6 @@ BEGIN
 END
 GO
 
-<<<<<<< HEAD
-
 --=====================================================CREACIONES DE SP PARA ABM DE CADA TABLA=====================================================--
 
 --=====================================================TABLA USUARIO=====================================================--	
@@ -434,23 +432,23 @@ GO
 */
 CREATE OR ALTER PROCEDURE dominio.alta_usuario
     @nombre_usuario VARCHAR(20),
-    @contraseña VARCHAR(20)
+    @contrase�a VARCHAR(20)
 AS
 BEGIN
 	SET NOCOUNT ON;
 
-    IF LEN(@contraseña) < 8 OR 
-       @contraseña NOT LIKE '%[0-9]%' OR
-       @contraseña NOT LIKE '%[a-zA-Z]%' OR
-       (@contraseña NOT LIKE '%!%' AND
-        @contraseña NOT LIKE '%@%' AND
-        @contraseña NOT LIKE '%#%' AND
-        @contraseña NOT LIKE '%$%' AND
-        @contraseña NOT LIKE '%^%' AND
-        @contraseña NOT LIKE '%&%' AND
-        @contraseña NOT LIKE '%*%' AND
-        @contraseña NOT LIKE '%(%' AND
-        @contraseña NOT LIKE '%)%')
+    IF LEN(@contrase�a) < 8 OR 
+       @contrase�a NOT LIKE '%[0-9]%' OR
+       @contrase�a NOT LIKE '%[a-zA-Z]%' OR
+       (@contrase�a NOT LIKE '%!%' AND
+        @contrase�a NOT LIKE '%@%' AND
+        @contrase�a NOT LIKE '%#%' AND
+        @contrase�a NOT LIKE '%$%' AND
+        @contrase�a NOT LIKE '%^%' AND
+        @contrase�a NOT LIKE '%&%' AND
+        @contrase�a NOT LIKE '%*%' AND
+        @contrase�a NOT LIKE '%(%' AND
+        @contrase�a NOT LIKE '%)%')
     BEGIN
         RAISERROR('La contraseña no cumple con los requisitos de seguridad', 16, 1)
         RETURN
@@ -463,14 +461,14 @@ BEGIN
     END
     INSERT INTO dominio.usuario (
         nombre_usuario, 
-        contraseña, 
-        fecha_modificacion_contraseña, 
-        fecha_expiracion_contraseña,
+        contrase�a, 
+        fecha_modificacion_contrase�a, 
+        fecha_expiracion_contrase�a,
         estado_usuario
     )
     VALUES (
         @nombre_usuario, 
-        @contraseña, 
+        @contrase�a, 
         GETDATE(),
         DATEADD(YEAR, 1, GETDATE()),
         'activo'
@@ -482,7 +480,7 @@ GO
 
 
 /**
-	Este SP borra un usuario de manera lógica (cambia estado a 'inactivo')
+	Este SP borra un usuario de manera logica (cambia estado a 'inactivo')
 	@param	ID_usuario indica el ID del usuario a dar de baja
 	@return 0 si éxito, -1 si error
 */
@@ -531,7 +529,7 @@ GO
 CREATE OR ALTER PROCEDURE dominio.modificar_usuario
     @ID_usuario INT,
     @nuevo_nombre_usuario VARCHAR(20) = NULL,
-    @nueva_contraseña VARCHAR(20) = NULL,
+    @nueva_contrase�a VARCHAR(20) = NULL,
     @nuevo_estado VARCHAR(15) = NULL
 AS
 BEGIN
@@ -549,7 +547,7 @@ BEGIN
             IF EXISTS (SELECT 1 FROM dominio.usuario 
                       WHERE nombre_usuario = @nuevo_nombre_usuario AND ID_usuario <> @ID_usuario)
             BEGIN
-                RAISERROR('El nombre de usuario "%s" ya está en uso', 16, 1, @nuevo_nombre_usuario);
+                RAISERROR('El nombre de usuario "%s" ya esta en uso', 16, 1, @nuevo_nombre_usuario);
                 RETURN -1;
             END
             
@@ -558,21 +556,21 @@ BEGIN
             WHERE ID_usuario = @ID_usuario;
         END
 
-        IF @nueva_contraseña IS NOT NULL
+        IF @nueva_contrase�a IS NOT NULL
         BEGIN
-            IF LEN(@nueva_contraseña) < 8 OR 
-               @nueva_contraseña NOT LIKE '%[0-9]%' OR
-               @nueva_contraseña NOT LIKE '%[a-zA-Z]%' OR
-               @nueva_contraseña NOT LIKE '%[!@#$%^&*()]%'
+            IF LEN(@nueva_contrase�a) < 8 OR 
+               @nueva_contrase�a NOT LIKE '%[0-9]%' OR
+               @nueva_contrase�a NOT LIKE '%[a-zA-Z]%' OR
+               @nueva_contrase�a NOT LIKE '%[!@#$%^&*()]%'
             BEGIN
                 RAISERROR('La contraseña debe tener al menos 8 caracteres, incluir números, letras y un caracter especial (!@#$%^&*)', 16, 1);
                 RETURN -1;
             END
             
             UPDATE dominio.usuario 
-            SET contraseña = @nueva_contraseña,
-                fecha_modificacion_contraseña = GETDATE(),
-                fecha_expiracion_contraseña = DATEADD(YEAR, 1, GETDATE())
+            SET contrase�a = @nueva_contrase�a,
+                fecha_modificacion_contrase�a = GETDATE(),
+                fecha_expiracion_contrase�a = DATEADD(YEAR, 1, GETDATE())
             WHERE ID_usuario = @ID_usuario;
         END
 
@@ -580,7 +578,7 @@ BEGIN
         BEGIN
             IF @nuevo_estado NOT IN ('activo', 'inactivo', 'adeuda')
             BEGIN
-                RAISERROR('Estado inválido. Valores permitidos: "activo", "inactivo" o "adeuda"', 16, 1);
+                RAISERROR('Estado invalido. Valores permitidos: "activo", "inactivo" o "adeuda"', 16, 1);
                 RETURN -1;
             END
             
@@ -590,7 +588,7 @@ BEGIN
         END
 
         IF @nuevo_nombre_usuario IS NULL AND 
-           @nueva_contraseña IS NULL AND 
+           @nueva_contrase�a IS NULL AND 
            @nuevo_estado IS NULL
         BEGIN
             RAISERROR('No se proporcionaron datos para modificar', 16, 1);
@@ -622,7 +620,7 @@ BEGIN
     BEGIN TRY
         IF LEN(TRIM(@nombre_rol)) = 0
         BEGIN
-            RAISERROR('El nombre del rol no puede estar vacío', 16, 1);
+            RAISERROR('El nombre del rol no puede estar vaci�o', 16, 1);
             RETURN -1;
         END
         
@@ -671,7 +669,7 @@ BEGIN
 
         IF LEN(TRIM(@nuevo_nombre_rol)) = 0
         BEGIN
-            RAISERROR('El nombre del rol no puede estar vacío', 16, 1);
+            RAISERROR('El nombre del rol no puede estar vacio', 16, 1);
             RETURN -1;
         END
         
@@ -681,7 +679,7 @@ BEGIN
             AND ID_rol <> @ID_rol
         )
         BEGIN
-            RAISERROR('El nombre de rol "%s" ya está en uso por otro rol', 16, 1, @nuevo_nombre_rol);
+            RAISERROR('El nombre de rol "%s" ya esta en uso por otro rol', 16, 1, @nuevo_nombre_rol);
             RETURN -1;
         END
 
@@ -702,10 +700,10 @@ GO
 
 /*
 	Consideramos que no es eficiente implementar una baja de rol, es preferible cambiar el nombre de ese rol
-	ya que rol se relaciona con usuario (N:N) generando la tabla rol_usuario, realizar una baja sería un problema en la lógica de negocios
-	Si tenemos muchos usuarios con el rol adeuda (que indica que tienen deudas y no han pagado), y por alguna razón le borramos el rol
-	esa persona no queda sin rol o le pone por default activo, concluimos que simplemente es mejor cambiar de nombre el rol por algún otro.
-	Además, creemos que no será una operación usada con frecuencia, sumando otro motivo para no realizarla.
+	ya que rol se relaciona con usuario (N:N) generando la tabla rol_usuario, realizar una baja seria un problema en la logica de negocios
+	Si tenemos muchos usuarios con el rol adeuda (que indica que tienen deudas y no han pagado), y por alguna razon le borramos el rol
+	esa persona no queda sin rol o le pone por default activo, concluimos que simplemente es mejor cambiar de nombre el rol por algun otro.
+	Ademas, creemos que no sera una operacion usada con frecuencia, sumando otro motivo para no realizarla.
 */
 --==========================================Crear SP ABM socio==========================================--
 
@@ -748,14 +746,14 @@ BEGIN
     --validar DNI
     IF TRY_CAST(@DNI AS INT) IS NULL OR CAST(@DNI AS INT) <= 0 OR CAST(@DNI AS INT) > 99999999
     BEGIN
-        RAISERROR('DNI inválido.', 16, 1);
+        RAISERROR('DNI invalido.', 16, 1);
         RETURN;
     END
 
-    --validar teléfono
+    --validar telefono
     IF LEN(@telefono) <> 10
     BEGIN
-        RAISERROR('Teléfono debe tener 10 dígitos.', 16, 1);
+        RAISERROR('Telefono debe tener 10 digitos.', 16, 1);
         RETURN;
     END
 
@@ -780,7 +778,7 @@ BEGIN
         END
     END
 
-    -- Si es responsable y no se pasó grupo_fam, creo uno nuevo
+    -- Si es responsable y no se pasa grupo_fam, creo uno nuevo
     IF @es_responsable = 1 AND @id_grupo_familiar IS NULL
     BEGIN
         INSERT INTO dominio.grupo_familiar DEFAULT VALUES;
@@ -858,7 +856,7 @@ BEGIN
     );
 
     PRINT 'Socio registrado exitosamente.';
-END;
+END
 GO
 
 CREATE OR ALTER PROCEDURE dominio.modificar_socio
@@ -997,11 +995,11 @@ END;
 GO
 
 
-/*tenemos que tener los campos eliminado BIT, fecha_baja DATE para el borrado lógico.
+/*tenemos que tener los campos eliminado BIT, fecha_baja DATE para el borrado logico.
 por otra parte surge la idea de agregar el campo nro_socio UNIQUE que admita NULL,
 de esta manera podemos discriminar de los socios mayores que realizan actividades, de los que solo son responsables.
 Aplicado al siguiente sp, con da la posibilidad de que si un socio mayor y resp del grupo_fam quiere darse de baja, pueda hacerlo
-para quedar solo como responsable. Sino deberíamos dar de baja los menores a cargo, o dejarlo activo como socio, debienndo abonar membresía.
+para quedar solo como responsable. Sino deberíamos dar de baja los menores a cargo, o dejarlo activo como socio, debienndo abonar membresi�a.
 
 ALTER TABLE dominio.socio
 ADD 
@@ -1066,7 +1064,7 @@ BEGIN
         RETURN;
     END
 
-    --si no tiene menores a cargo, borrado lógico
+    --si no tiene menores a cargo, borrado logico
     UPDATE dominio.socio
     SET 
         eliminado = 1,
@@ -1087,7 +1085,7 @@ CREATE OR ALTER PROCEDURE dominio.insertar_actividad
 --=====================================================CUOTA MEMBRESIA=====================================================--
 ---------------SP DE CUOTA_MEMBRESIA, FACTURA, DETALLE_FACURA Y PAGO------------------------------------------------
 ALTER TABLE dominio.cuota_membresia
-ADD activo NOT NULL BIT DEFAULT 1; -- 1 = activo, 0 = borrado logico
+ADD activo BIT NOT NULL DEFAULT 1; -- 1 = activo, 0 = borrado logico
 GO
 
 CREATE OR ALTER PROCEDURE insertar_cuota_membresia
@@ -1459,7 +1457,7 @@ END
         edad_minima = @edad_minima,
         edad_maxima = @edad_maxima
     WHERE ID_cuota = @ID_cuota;
-END;
+END
 GO
 
 --=====================================================FACTURA=====================================================--
@@ -1527,7 +1525,7 @@ ALTER TABLE dominio.detalle_factura
 ADD activo BIT NOT NULL DEFAULT 1;
 GO
 
-CREATE OR ALTER PROCEDURE insertar_detalle_factura
+CREATE OR ALTER PROCEDURE dominio.insertar_detalle_factura
 	@descripcion VARCHAR (70),
 	@cantidad INT,
 	@subtotal DECIMAL (10,2),
@@ -1557,7 +1555,7 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE modificar_detalle_factura
+CREATE OR ALTER PROCEDURE dominio.modificar_detalle_factura
     @ID_detalle_factura INT,
     @descripcion VARCHAR(70),
     @cantidad INT,
@@ -1607,7 +1605,7 @@ ADD activo BIT NOT NULL DEFAULT 1;
 GO
 
 --=====================================================PAGO=====================================================--
-CREATE OR ALTER PROCEDURE insertar_pago
+CREATE OR ALTER PROCEDURE dominio.insertar_pago
     @fecha_pago DATETIME,
     @medio_de_pago CHAR(30),
     @monto DECIMAL(8,2),
@@ -1645,7 +1643,7 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE modificar_pago
+CREATE OR ALTER PROCEDURE dominio.modificar_pago
     @ID_pago INT,
     @fecha_pago DATETIME,
     @medio_de_pago CHAR(30),
@@ -1685,10 +1683,12 @@ BEGIN
         monto = @monto,
         estado = @estado
     WHERE ID_pago = @ID_pago;
-END;
+END
 GO
 
-CREATE OR ALTER PROCEDURE eliminar_pago
+
+
+CREATE OR ALTER PROCEDURE dominio.eliminar_pago
     @ID_pago INT
 AS
 BEGIN

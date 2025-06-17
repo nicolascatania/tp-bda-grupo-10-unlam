@@ -1,5 +1,5 @@
 -- Este script se encarga de generar los objetos necesarios para la persistencia de datos (bd, schemas y tablas)
--- El script est· diseÒado para que pueda ejecutarse de una, por lotes, con el comando GO, verificando que ninguno de los objetos exista previamente.
+-- El script est√° dise√±ado para que pueda ejecutarse de una, por lotes, con el comando GO, verificando que ninguno de los objetos exista previamente.
 IF NOT EXISTS (
     SELECT name 
     FROM sys.databases 
@@ -28,7 +28,7 @@ END
 
 GO
 
--- Este esquema es para generar juegos de datos random, nombres, apellidos, fechas, lo que se neceste para generar datos y asÌ realizar pruebas
+-- Este esquema es para generar juegos de datos random, nombres, apellidos, fechas, lo que se neceste para generar datos y as√≠ realizar pruebas
 IF NOT EXISTS (
     SELECT * FROM sys.schemas WHERE name = 'datosRandom'
 )
@@ -49,25 +49,25 @@ BEGIN
     CREATE TABLE dominio.usuario (
         ID_usuario INT IDENTITY(1,1) PRIMARY KEY ,
         nombre_usuario VARCHAR(20) NOT NULL,
-        contraseÒa VARCHAR(20) NOT NULL,
-        fecha_modificacion_contraseÒa DATETIME,
-        fecha_expiracion_contraseÒa DATETIME,
+        contrase√±a VARCHAR(20) NOT NULL,
+        fecha_modificacion_contrase√±a DATETIME,
+        fecha_expiracion_contrase√±a DATETIME,
         estado_usuario CHAR(15) DEFAULT 'activo', --estados: activo, inactivo, adeuda
         CHECK (
-            LEN(contraseÒa) >= 8 AND
-            contraseÒa LIKE '%[0-9]%' AND        -- al menos un n˙mero
-            contraseÒa LIKE '%[a-zA-Z]%' AND     -- al menos una letra
+            LEN(contrase√±a) >= 8 AND
+            contrase√±a LIKE '%[0-9]%' AND        -- al menos un n√∫mero
+            contrase√±a LIKE '%[a-zA-Z]%' AND     -- al menos una letra
             (
 			-- para caracteres especiales
-                contraseÒa LIKE '%!%' OR
-                contraseÒa LIKE '%@%' OR
-                contraseÒa LIKE '%#%' OR
-                contraseÒa LIKE '%$%' OR
-                contraseÒa LIKE '%^%' OR
-                contraseÒa LIKE '%&%' OR
-                contraseÒa LIKE '%*%' OR
-                contraseÒa LIKE '%(%' OR
-                contraseÒa LIKE '%)%'
+                contrase√±a LIKE '%!%' OR
+                contrase√±a LIKE '%@%' OR
+                contrase√±a LIKE '%#%' OR
+                contrase√±a LIKE '%$%' OR
+                contrase√±a LIKE '%^%' OR
+                contrase√±a LIKE '%&%' OR
+                contrase√±a LIKE '%*%' OR
+                contrase√±a LIKE '%(%' OR
+                contrase√±a LIKE '%)%'
             )
         )
     );
@@ -335,7 +335,7 @@ BEGIN
 		ID_descuento INT IDENTITY(1,1) PRIMARY KEY,
 		descripcion VARCHAR (70),
 		tipo_descuento CHAR(30),
-		porcentaje DECIMAL (3,2), -- 0,06 0,90 0,50 y asÌ tomaran los valores
+		porcentaje DECIMAL (3,2), -- 0,06 0,90 0,50 y as√≠ tomaran los valores
 		id_detalle_factura INT NOT NULL
 		CONSTRAINT FK_id_detalle_factura FOREIGN KEY (id_detalle_factura) 
 			REFERENCES dominio.detalle_factura(ID_detalle_factura),
@@ -419,38 +419,43 @@ END
 GO
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 
+=======
+>>>>>>> abm-nacho
 --=====================================================CREACIONES DE SP PARA ABM DE CADA TABLA=====================================================--
+
+--=====================================================TABLA USUARIO=====================================================--	
 /**
 	El siguiente SP da de alta un usuario
-	Valida que la contraseÒa cumpla los requerimientos marcados en el check de la tabla usuario, para generar un raiserror con una indicaciÛn clara del motivo de falla
-	Valida que nombre de usuario sea ˙nico
-	Setea la fecha de creaciÛn de contraseÒa a hoy y la fecha de expiraciÛn a dentro de un aÒo
-	Encripta la contraseÒa
+	Valida que la contrase√±a cumpla los requerimientos marcados en el check de la tabla usuario, para generar un raiserror con una indicaci√≥n clara del motivo de falla
+	Valida que nombre de usuario sea √∫nico
+	Setea la fecha de creaci√≥n de contrase√±a a hoy y la fecha de expiraci√≥n a dentro de un a√±o
+	Encripta la contrase√±a
 	@param	nombre_usuario indica el nombre de usuario a dar de alta
-	@param	contraseÒa	   indica la contraseÒa a ingresar		
+	@param	contrase√±a	   indica la contrase√±a a ingresar		
 */
 CREATE OR ALTER PROCEDURE dominio.alta_usuario
     @nombre_usuario VARCHAR(20),
-    @contraseÒa VARCHAR(20)
+    @contrase√±a VARCHAR(20)
 AS
 BEGIN
 	SET NOCOUNT ON;
 
-    IF LEN(@contraseÒa) < 8 OR 
-       @contraseÒa NOT LIKE '%[0-9]%' OR
-       @contraseÒa NOT LIKE '%[a-zA-Z]%' OR
-       (@contraseÒa NOT LIKE '%!%' AND
-        @contraseÒa NOT LIKE '%@%' AND
-        @contraseÒa NOT LIKE '%#%' AND
-        @contraseÒa NOT LIKE '%$%' AND
-        @contraseÒa NOT LIKE '%^%' AND
-        @contraseÒa NOT LIKE '%&%' AND
-        @contraseÒa NOT LIKE '%*%' AND
-        @contraseÒa NOT LIKE '%(%' AND
-        @contraseÒa NOT LIKE '%)%')
+    IF LEN(@contrase√±a) < 8 OR 
+       @contrase√±a NOT LIKE '%[0-9]%' OR
+       @contrase√±a NOT LIKE '%[a-zA-Z]%' OR
+       (@contrase√±a NOT LIKE '%!%' AND
+        @contrase√±a NOT LIKE '%@%' AND
+        @contrase√±a NOT LIKE '%#%' AND
+        @contrase√±a NOT LIKE '%$%' AND
+        @contrase√±a NOT LIKE '%^%' AND
+        @contrase√±a NOT LIKE '%&%' AND
+        @contrase√±a NOT LIKE '%*%' AND
+        @contrase√±a NOT LIKE '%(%' AND
+        @contrase√±a NOT LIKE '%)%')
     BEGIN
-        RAISERROR('La contraseÒa no cumple con los requisitos de seguridad', 16, 1)
+        RAISERROR('La contrase√±a no cumple con los requisitos de seguridad', 16, 1)
         RETURN
     END
 
@@ -461,14 +466,14 @@ BEGIN
     END
     INSERT INTO dominio.usuario (
         nombre_usuario, 
-        contraseÒa, 
-        fecha_modificacion_contraseÒa, 
-        fecha_expiracion_contraseÒa,
+        contrase√±a, 
+        fecha_modificacion_contrase√±a, 
+        fecha_expiracion_contrase√±a,
         estado_usuario
     )
     VALUES (
         @nombre_usuario, 
-        @contraseÒa, 
+        @contrase√±a, 
         GETDATE(),
         DATEADD(YEAR, 1, GETDATE()),
         'activo'
@@ -480,9 +485,9 @@ GO
 
 
 /**
-	Este SP borra un usuario de manera lÛgica (cambia estado a 'inactivo')
+	Este SP borra un usuario de manera l√≥gica (cambia estado a 'inactivo')
 	@param	ID_usuario indica el ID del usuario a dar de baja
-	@return 0 si Èxito, -1 si error
+	@return 0 si √©xito, -1 si error
 */
 CREATE OR ALTER PROCEDURE dominio.baja_usuario
     @ID_usuario INT
@@ -499,7 +504,7 @@ BEGIN
         
         IF EXISTS (SELECT 1 FROM dominio.usuario WHERE ID_usuario = @ID_usuario AND estado_usuario = 'inactivo')
         BEGIN
-            RAISERROR('El usuario con ID %d ya est· inactivo', 16, 1, @ID_usuario);
+            RAISERROR('El usuario con ID %d ya est√° inactivo', 16, 1, @ID_usuario);
             RETURN -1;
         END
         
@@ -519,17 +524,17 @@ GO
 
 
 /**
-    El siguiente SP modifica los datos de un usuario existente, puede ser el nombre de usuario o la contraseÒa
-    @param ID_usuario indica el ID del usuario a modificar (obligatorio para encontrar el usuario en cuestiÛn, o terminar si no existe)
+    El siguiente SP modifica los datos de un usuario existente, puede ser el nombre de usuario o la contrase√±a
+    @param ID_usuario indica el ID del usuario a modificar (obligatorio para encontrar el usuario en cuesti√≥n, o terminar si no existe)
     @param nuevo_nombre_usuario nuevo nombre de usuario (opcional), si se indica, se valida que no exista un nombre de usuario como el ingresado, mantenemos la unicidad de los nombres de usuario
-    @param nueva_contraseÒa nueva contraseÒa (opcional, debe cumplir requisitos) si se indica, se actualizan las fechas de modificado y vencimiento, adem·s se realizan las validaciones correspondientes
+    @param nueva_contrase√±a nueva contrase√±a (opcional, debe cumplir requisitos) si se indica, se actualizan las fechas de modificado y vencimiento, adem√°s se realizan las validaciones correspondientes
     @param nuevo_estado nuevo estado (opcional: 'activo'/'inactivo'/'adeuda')
-    @return 0 si Èxito, -1 si error
+    @return 0 si √©xito, -1 si error
 */
 CREATE OR ALTER PROCEDURE dominio.modificar_usuario
     @ID_usuario INT,
     @nuevo_nombre_usuario VARCHAR(20) = NULL,
-    @nueva_contraseÒa VARCHAR(20) = NULL,
+    @nueva_contrase√±a VARCHAR(20) = NULL,
     @nuevo_estado VARCHAR(15) = NULL
 AS
 BEGIN
@@ -547,7 +552,7 @@ BEGIN
             IF EXISTS (SELECT 1 FROM dominio.usuario 
                       WHERE nombre_usuario = @nuevo_nombre_usuario AND ID_usuario <> @ID_usuario)
             BEGIN
-                RAISERROR('El nombre de usuario "%s" ya est· en uso', 16, 1, @nuevo_nombre_usuario);
+                RAISERROR('El nombre de usuario "%s" ya est√° en uso', 16, 1, @nuevo_nombre_usuario);
                 RETURN -1;
             END
             
@@ -556,21 +561,21 @@ BEGIN
             WHERE ID_usuario = @ID_usuario;
         END
 
-        IF @nueva_contraseÒa IS NOT NULL
+        IF @nueva_contrase√±a IS NOT NULL
         BEGIN
-            IF LEN(@nueva_contraseÒa) < 8 OR 
-               @nueva_contraseÒa NOT LIKE '%[0-9]%' OR
-               @nueva_contraseÒa NOT LIKE '%[a-zA-Z]%' OR
-               @nueva_contraseÒa NOT LIKE '%[!@#$%^&*()]%'
+            IF LEN(@nueva_contrase√±a) < 8 OR 
+               @nueva_contrase√±a NOT LIKE '%[0-9]%' OR
+               @nueva_contrase√±a NOT LIKE '%[a-zA-Z]%' OR
+               @nueva_contrase√±a NOT LIKE '%[!@#$%^&*()]%'
             BEGIN
-                RAISERROR('La contraseÒa debe tener al menos 8 caracteres, incluir n˙meros, letras y un caracter especial (!@#$%^&*)', 16, 1);
+                RAISERROR('La contrase√±a debe tener al menos 8 caracteres, incluir n√∫meros, letras y un caracter especial (!@#$%^&*)', 16, 1);
                 RETURN -1;
             END
             
             UPDATE dominio.usuario 
-            SET contraseÒa = @nueva_contraseÒa,
-                fecha_modificacion_contraseÒa = GETDATE(),
-                fecha_expiracion_contraseÒa = DATEADD(YEAR, 1, GETDATE())
+            SET contrase√±a = @nueva_contrase√±a,
+                fecha_modificacion_contrase√±a = GETDATE(),
+                fecha_expiracion_contrase√±a = DATEADD(YEAR, 1, GETDATE())
             WHERE ID_usuario = @ID_usuario;
         END
 
@@ -578,7 +583,7 @@ BEGIN
         BEGIN
             IF @nuevo_estado NOT IN ('activo', 'inactivo', 'adeuda')
             BEGIN
-                RAISERROR('Estado inv·lido. Valores permitidos: "activo", "inactivo" o "adeuda"', 16, 1);
+                RAISERROR('Estado inv√°lido. Valores permitidos: "activo", "inactivo" o "adeuda"', 16, 1);
                 RETURN -1;
             END
             
@@ -588,7 +593,7 @@ BEGIN
         END
 
         IF @nuevo_nombre_usuario IS NULL AND 
-           @nueva_contraseÒa IS NULL AND 
+           @nueva_contrase√±a IS NULL AND 
            @nuevo_estado IS NULL
         BEGIN
             RAISERROR('No se proporcionaron datos para modificar', 16, 1);
@@ -606,7 +611,7 @@ BEGIN
 END
 GO
 
-
+--=====================================================TABLA ROL=====================================================--
 /**
 	Da de alta un nuevo rol
 	@param nombre_rol	nombre que indica el usuario para crear un nuevo rol
@@ -620,7 +625,7 @@ BEGIN
     BEGIN TRY
         IF LEN(TRIM(@nombre_rol)) = 0
         BEGIN
-            RAISERROR('El nombre del rol no puede estar vacÌo', 16, 1);
+            RAISERROR('El nombre del rol no puede estar vac√≠o', 16, 1);
             RETURN -1;
         END
         
@@ -649,9 +654,9 @@ GO
 
 /*
 	Modifica el nombre de rol en base a un id de rol dado
-	@param ID_rol			id para buscar en la tabla, si no existe, cancela la operaciÛn
+	@param ID_rol			id para buscar en la tabla, si no existe, cancela la operaci√≥n
 	@param nuevo_nombre_rol	indica el nuevo nombre a setear
-	@return 0 Èxito, -1 error
+	@return 0 √©xito, -1 error
 */
 CREATE OR ALTER PROCEDURE dominio.modificar_rol
     @ID_rol INT,
@@ -669,7 +674,7 @@ BEGIN
 
         IF LEN(TRIM(@nuevo_nombre_rol)) = 0
         BEGIN
-            RAISERROR('El nombre del rol no puede estar vacÌo', 16, 1);
+            RAISERROR('El nombre del rol no puede estar vac√≠o', 16, 1);
             RETURN -1;
         END
         
@@ -679,7 +684,7 @@ BEGIN
             AND ID_rol <> @ID_rol
         )
         BEGIN
-            RAISERROR('El nombre de rol "%s" ya est· en uso por otro rol', 16, 1, @nuevo_nombre_rol);
+            RAISERROR('El nombre de rol "%s" ya est√° en uso por otro rol', 16, 1, @nuevo_nombre_rol);
             RETURN -1;
         END
 
@@ -700,10 +705,10 @@ GO
 
 /*
 	Consideramos que no es eficiente implementar una baja de rol, es preferible cambiar el nombre de ese rol
-	ya que rol se relaciona con usuario (N:N) generando la tabla rol_usuario, realizar una baja serÌa un problema en la lÛgica de negocios
-	Si tenemos muchos usuarios con el rol adeuda (que indica que tienen deudas y no han pagado), y por alguna razÛn le borramos el rol
-	esa persona no queda sin rol o le pone por default activo, concluimos que simplemente es mejor cambiar de nombre el rol por alg˙n otro.
-	Adem·s, creemos que no ser· una operaciÛn usada con frecuencia, sumando otro motivo para no realizarla.
+	ya que rol se relaciona con usuario (N:N) generando la tabla rol_usuario, realizar una baja ser√≠a un problema en la l√≥gica de negocios
+	Si tenemos muchos usuarios con el rol adeuda (que indica que tienen deudas y no han pagado), y por alguna raz√≥n le borramos el rol
+	esa persona no queda sin rol o le pone por default activo, concluimos que simplemente es mejor cambiar de nombre el rol por alg√∫n otro.
+	Adem√°s, creemos que no ser√° una operaci√≥n usada con frecuencia, sumando otro motivo para no realizarla.
 */
 =======
 --==========================================Crear SP ABM socio==========================================--
@@ -732,7 +737,7 @@ BEGIN
         RETURN;
     END
 
-    --calcular edad y asigno categorÌa
+    --calcular edad y asigno categor√≠a
     DECLARE @edad INT = DATEDIFF(YEAR, @fecha_nacimiento, GETDATE());
     DECLARE @categoria CHAR(10);
     IF @edad < 13
@@ -747,14 +752,14 @@ BEGIN
     --validar DNI
     IF TRY_CAST(@DNI AS INT) IS NULL OR CAST(@DNI AS INT) <= 0 OR CAST(@DNI AS INT) > 99999999
     BEGIN
-        RAISERROR('DNI inv·lido.', 16, 1);
+        RAISERROR('DNI inv√°lido.', 16, 1);
         RETURN;
     END
 
-    --validar telÈfono
+    --validar tel√©fono
     IF LEN(@telefono) <> 10
     BEGIN
-        RAISERROR('TelÈfono debe tener 10 dÌgitos.', 16, 1);
+        RAISERROR('Tel√©fono debe tener 10 d√≠gitos.', 16, 1);
         RETURN;
     END
 
@@ -779,7 +784,7 @@ BEGIN
         END
     END
 
-    -- Si es responsable y no se pasÛ grupo_fam, creo uno nuevo
+    -- Si es responsable y no se pas√≥ grupo_fam, creo uno nuevo
     IF @es_responsable = 1 AND @id_grupo_familiar IS NULL
     BEGIN
         INSERT INTO dominio.grupo_familiar DEFAULT VALUES;
@@ -885,7 +890,7 @@ BEGIN
         RETURN;
     END
 
-    --calcular edad y asignar categorÌa
+    --calcular edad y asignar categor√≠a
     DECLARE @edad INT = DATEDIFF(YEAR, @fecha_nacimiento, GETDATE());
     DECLARE @categoria CHAR(10);
     IF @edad < 13
@@ -996,11 +1001,11 @@ END;
 GO
 
 
-/*tenemos que tener los campos eliminado BIT, fecha_baja DATE para el borrado lÛgico.
+/*tenemos que tener los campos eliminado BIT, fecha_baja DATE para el borrado l√≥gico.
 por otra parte surge la idea de agregar el campo nro_socio UNIQUE que admita NULL,
 de esta manera podemos discriminar de los socios mayores que realizan actividades, de los que solo son responsables.
 Aplicado al siguiente sp, con da la posibilidad de que si un socio mayor y resp del grupo_fam quiere darse de baja, pueda hacerlo
-para quedar solo como responsable. Sino deberÌamos dar de baja los menores a cargo, o dejarlo activo como socio, debienndo abonar membresÌa.
+para quedar solo como responsable. Sino deber√≠amos dar de baja los menores a cargo, o dejarlo activo como socio, debienndo abonar membres√≠a.
 
 ALTER TABLE dominio.socio
 ADD 
@@ -1011,7 +1016,7 @@ ADD
         nro_socio IS NULL OR nro_socio > 0
     );
 GO
-Modificar creaciÛn de tabla SOCIO para mantener coherencia desde la creaciÛn de objetos.
+Modificar creaci√≥n de tabla SOCIO para mantener coherencia desde la creaci√≥n de objetos.
 
 */
 
@@ -1022,7 +1027,7 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    --validar que el socio exista y no estÈ dado de baja
+    --validar que el socio exista y no est√© dado de baja
     IF NOT EXISTS (
         SELECT 1 FROM dominio.socio WHERE ID_socio = @ID_socio AND eliminado = 0
     )
@@ -1038,7 +1043,7 @@ BEGIN
         WHERE id_responsable_a_cargo = @ID_socio AND eliminado = 0 AND DATEDIFF(YEAR, fecha_nacimiento, GETDATE()) < 18
     )
     BEGIN
-        PRINT 'El socio tiene menores a cargo. Ser· convertido en Tutor.';
+        PRINT 'El socio tiene menores a cargo. Ser√° convertido en Tutor.';
 
         --si teiene menor a cargo deja de ser socio activo y se cambia a rol tutor
         UPDATE dominio.socio
@@ -1065,7 +1070,7 @@ BEGIN
         RETURN;
     END
 
-    --si no tiene menores a cargo, borrado lÛgico
+    --si no tiene menores a cargo, borrado l√≥gico
     UPDATE dominio.socio
     SET 
         eliminado = 1,
@@ -1076,4 +1081,7 @@ BEGIN
     PRINT 'Socio dado de baja exitosamente.';
 END;
 GO
+<<<<<<< HEAD
 >>>>>>> abm-socio-leo
+=======
+>>>>>>> abm-nacho

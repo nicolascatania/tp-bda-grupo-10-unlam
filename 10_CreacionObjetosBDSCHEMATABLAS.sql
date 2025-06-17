@@ -418,11 +418,7 @@ BEGIN
 END
 GO
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 
-=======
->>>>>>> abm-nacho
 --=====================================================CREACIONES DE SP PARA ABM DE CADA TABLA=====================================================--
 
 --=====================================================TABLA USUARIO=====================================================--	
@@ -710,7 +706,6 @@ GO
 	esa persona no queda sin rol o le pone por default activo, concluimos que simplemente es mejor cambiar de nombre el rol por algún otro.
 	Además, creemos que no será una operación usada con frecuencia, sumando otro motivo para no realizarla.
 */
-=======
 --==========================================Crear SP ABM socio==========================================--
 
 CREATE OR ALTER PROCEDURE dominio.sp_alta_socio
@@ -1081,7 +1076,293 @@ BEGIN
     PRINT 'Socio dado de baja exitosamente.';
 END;
 GO
-<<<<<<< HEAD
->>>>>>> abm-socio-leo
-=======
->>>>>>> abm-nacho
+
+
+--======================================================ACTIVIDAD======================================================-- 
+--Insertar actividad
+CREATE OR ALTER PROCEDURE dominio.insertar_actividad
+	@nombre_actividad CHAR(15),
+    @costo_mensual DECIMAL(8,2),
+    @edad_minima INT,
+    @edad_maxima INT
+AS
+BEGIN
+ IF @edad_minima > @edad_maxima
+    BEGIN
+        RAISERROR('La edad minima no puede ser mayor que la edad maxima.', 16, 1);
+        RETURN;
+    END
+
+    INSERT INTO dominio.actividad (nombre_actividad, costo_mensual, edad_minima, edad_maxima)
+    VALUES (@nombre_actividad, @costo_mensual, @edad_minima, @edad_maxima);
+END;
+GO
+
+--Modificar actividad
+CREATE OR ALTER PROCEDURE dominio.modificar_actividad
+    @ID_actividad INT,
+    @nombre_actividad VARCHAR(15) = NULL,
+    @costo_mensual DECIMAL(8,2) = NULL,
+    @edad_minima INT = NULL,
+    @edad_maxima INT = NULL
+AS
+BEGIN
+	IF NOT EXISTS (SELECT 1 FROM dominio.actividad WHERE ID_actividad = @ID_actividad)
+		BEGIN
+			RAISERROR('La actividad especificada no existe.', 16, 1);
+			RETURN;
+		END
+    IF @edad_minima > @edad_maxima
+		BEGIN
+			RAISERROR('La edad minima no puede ser mayor que la edad maxima.', 16, 1);
+			RETURN;
+		END
+
+    UPDATE dominio.actividad
+    SET nombre_actividad = ISNULL(@nombre_actividad, nombre_actividad),
+        costo_mensual = ISNULL(@costo_mensual, costo_mensual),
+        edad_minima = ISNULL(@edad_minima, edad_minima),
+        edad_maxima = ISNULL(@edad_maxima, edad_maxima)
+    WHERE ID_actividad = @ID_actividad;
+END;
+GO
+
+--Borrar actividad
+CREATE OR ALTER PROCEDURE dominio.borrar_actividad
+	@ID_actividad INT
+	AS
+BEGIN
+	IF NOT EXISTS (SELECT 1 FROM dominio.actividad WHERE ID_actividad = @ID_actividad)
+		BEGIN
+			RAISERROR('La actividad especificada no existe.', 16, 1);
+			RETURN;
+		END
+    DELETE FROM dominio.actividad
+    WHERE ID_actividad = @ID_actividad;
+END;
+GO
+
+--======================================================Horario de actividad======================================================-- 
+
+--Insertar horario de actividad
+CREATE OR ALTER PROCEDURE dominio.insertar_horario_de_actividad
+    @dia CHAR(10),
+    @hora_inicio TIME,
+    @hora_fin TIME,
+    @id_actividad INT
+AS
+BEGIN
+	IF NOT EXISTS (SELECT 1 FROM dominio.actividad WHERE ID_actividad = @id_actividad)
+		BEGIN
+			RAISERROR('La actividad especificada no existe.', 16, 1);
+			RETURN;
+		END
+	IF UPPER(@dia) NOT IN ('LUNES','MARTES','MI�RCOLES','JUEVES','VIERNES','S�BADO','DOMINGO')
+		BEGIN
+			RAISERROR('El d�a debe ser un d�a de la semana v�lido.', 16, 1);
+			RETURN;
+		END
+    IF (@hora_inicio > @hora_fin)
+		BEGIN
+			RAISERROR('La hora de inicio no puede ser mayor que la hora de fin.', 16, 1);
+			RETURN;
+		END;
+    INSERT INTO dominio.horario_de_actividad (dia, hora_inicio, hora_fin, id_actividad)
+    VALUES (@dia, @hora_inicio, @hora_fin, @id_actividad);
+END;
+GO
+
+--Modificar horario de actividad
+CREATE OR ALTER PROCEDURE dominio.modificar_horario_de_actividad
+    @ID_horario INT,
+    @dia CHAR(10),
+    @hora_inicio TIME,
+    @hora_fin TIME,
+    @id_actividad INT
+AS
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM dominio.horario_de_actividad WHERE ID_horario = @ID_horario)
+    BEGIN
+        RAISERROR('El horario especificado no existe.', 16, 1);
+        RETURN;
+    END
+    IF @hora_inicio > @hora_fin
+    BEGIN
+        RAISERROR('La hora de inicio no puede ser mayor que la hora de fin.', 16, 1);
+        RETURN;
+    END;
+
+    UPDATE dominio.horario_de_actividad
+    SET dia = ISNULL(@dia, dia),
+        hora_inicio = ISNULL(@hora_inicio, hora_inicio),
+        hora_fin = ISNULL(@hora_fin, hora_fin),
+        id_actividad = ISNULL(@id_actividad, id_actividad)
+    WHERE ID_horario = @ID_horario;
+END;
+GO
+
+--Borrar horario
+CREATE OR ALTER PROCEDURE dominio.borrar_horario_de_actividad
+@ID_horario INT
+AS
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM dominio.horario_de_actividad WHERE ID_horario = @ID_horario)
+    BEGIN
+        RAISERROR('El horario especificado no existe.', 16, 1);
+        RETURN;
+    END
+    DELETE FROM dominio.horario_de_actividad
+    WHERE ID_horario = @ID_horario;
+END;
+GO
+
+--======================================================Inscripcion_actividad======================================================-- 
+
+--Insertar inscripcion a una actividad
+CREATE OR ALTER PROCEDURE dominio.insertar_inscripcion_actividad
+	@fecha_inscripcion DATE,
+    @id_actividad INT,
+    @id_socio INT
+AS
+BEGIN
+    INSERT INTO dominio.inscripcion_actividad (fecha_inscripcion, id_actividad, id_socio)
+    VALUES (@fecha_inscripcion, @id_actividad, @id_socio);
+END;
+GO
+
+--Modificar inscripcion a una actividad
+CREATE PROCEDURE dominio.modificar_inscripcion_actividad
+    @ID_inscripcion INT,
+    @fecha_inscripcion DATE,
+    @id_actividad INT,
+    @id_socio INT
+AS
+BEGIN
+    UPDATE dominio.inscripcion_actividad
+    SET fecha_inscripcion = @fecha_inscripcion,
+        id_actividad = @id_actividad,
+        id_socio = @id_socio
+    WHERE ID_inscripcion = @ID_inscripcion;
+END;
+GO
+
+-- Borra una inscripcion a una actividad
+CREATE PROCEDURE dominio.borrar_inscripcion_actividad
+    @ID_inscripcion INT
+AS
+BEGIN
+    DELETE FROM dominio.inscripcion_actividad
+    WHERE ID_inscripcion = @ID_inscripcion;
+END;
+GO
+
+--======================================================Asistencia======================================================-- 
+
+--Inserta un registro de asistencia 
+CREATE PROCEDURE dominio.insertar_asistencia
+    @fecha DATE,
+    @asistio BIT,
+    @id_inscripcion_actividad INT = NULL
+AS
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM dominio.actividad WHERE ID_actividad = @id_inscripcion_actividad)
+    BEGIN
+        RAISERROR('La inscripci�n a actividad especificada no existe.', 16, 1);
+        RETURN;
+    END
+    INSERT INTO dominio.asistencia (fecha, asistio, id_inscripcion_actividad)
+    VALUES (@fecha, @asistio, @id_inscripcion_actividad);
+END;
+GO
+
+-- Modifica un registro de asistencia
+CREATE PROCEDURE dominio.modificar_asistencia
+    @ID_asistencia INT,
+    @fecha DATE,
+    @asistio BIT,
+    @id_inscripcion_actividad INT
+AS
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM dominio.asistencia WHERE ID_asistencia = @ID_asistencia)
+    BEGIN
+        RAISERROR('El registro de asistencia especificado no existe.', 16, 1);
+        RETURN;
+    END
+    UPDATE dominio.asistencia
+    SET fecha = @fecha,
+        asistio = @asistio,
+        id_inscripcion_actividad = @id_inscripcion_actividad
+    WHERE ID_asistencia = @ID_asistencia;
+END;
+GO
+
+
+--Borrar un registro de asistencia 
+CREATE PROCEDURE dominio.borrar_asistencia
+    @ID_asistencia INT
+AS 
+BEGIN
+	IF NOT EXISTS (SELECT 1 FROM dominio.asistencia WHERE ID_asistencia = @ID_asistencia)
+        BEGIN
+            RAISERROR('El registro de asistencia especificado no existe', 16, 1);
+            RETURN;
+        END;
+	DELETE FROM dominio.asistencia
+    WHERE ID_asistencia = @ID_asistencia;
+END;
+GO   
+
+--======================================================Descuento======================================================-- 
+--Insertar descuento
+CREATE OR ALTER PROCEDURE dominio.insertar_descuento
+    @descripcion VARCHAR(70),
+    @tipo_descuento VARCHAR(50),
+    @porcentaje DECIMAL(3,2),
+    @id_detalle_factura INT
+AS
+BEGIN
+	IF NOT EXISTS (SELECT 1 FROM dominio.detalle_factura WHERE ID_detalle_factura = @id_detalle_factura)
+		BEGIN
+			RAISERROR('El detalle de factura especificado no existe', 16, 1);
+			RETURN;
+		END
+	INSERT INTO dominio.descuento (descripcion, tipo_descuento, porcentaje, id_detalle_factura)
+    VALUES (@descripcion, @tipo_descuento, @porcentaje, @id_detalle_factura);
+END;
+GO
+
+--Actualizar descuento 
+CREATE OR ALTER PROCEDURE dominio.actualizar_descuento
+    @ID_descuento INT,
+    @descripcion VARCHAR(70) = NULL,
+    @tipo_descuento CHAR(30) = NULL,
+    @porcentaje DECIMAL(3,2) = NULL
+AS
+BEGIN
+	IF NOT EXISTS (SELECT 1 FROM dominio.descuento WHERE ID_descuento = @ID_descuento)
+		BEGIN
+			RAISERROR('El descuento especificado no existe', 16, 1);
+			RETURN;
+		END
+	UPDATE dominio.descuento
+		SET 
+			descripcion = ISNULL(@descripcion, descripcion),
+			tipo_descuento = ISNULL(@tipo_descuento, tipo_descuento),
+			porcentaje = ISNULL(@porcentaje, porcentaje)
+		WHERE ID_descuento = @ID_descuento;
+END;
+GO	
+--Borrar descuento
+CREATE OR ALTER PROCEDURE dominio.eliminar_descuento
+    @ID_descuento INT
+AS
+BEGIN
+IF NOT EXISTS (SELECT 1 FROM dominio.descuento WHERE ID_descuento = @ID_descuento)
+    BEGIN
+        RAISERROR('El descuento especificado no existe', 16, 1);
+        RETURN;
+    END
+    DELETE FROM dominio.descuento
+    WHERE ID_descuento = @ID_descuento;
+END
+GO

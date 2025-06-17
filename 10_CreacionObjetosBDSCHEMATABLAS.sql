@@ -419,6 +419,8 @@ END
 GO
 
 --=====================================================CREACIONES DE SP PARA ABM DE CADA TABLA=====================================================--
+
+--=====================================================TABLA USUARIO=====================================================--	
 /**
 	El siguiente SP da de alta un usuario
 	Valida que la contraseña cumpla los requerimientos marcados en el check de la tabla usuario, para generar un raiserror con una indicación clara del motivo de falla
@@ -604,7 +606,7 @@ BEGIN
 END
 GO
 
-
+--=====================================================TABLA ROL=====================================================--
 /**
 	Da de alta un nuevo rol
 	@param nombre_rol	nombre que indica el usuario para crear un nuevo rol

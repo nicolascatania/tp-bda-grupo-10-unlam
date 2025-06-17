@@ -415,6 +415,7 @@ BEGIN
 END
 GO
 
+--=====================================================CUOTA MEMBRESIA=====================================================--
 ---------------SP DE CUOTA_MEMBRESIA, FACTURA, DETALLE_FACURA Y PAGO------------------------------------------------
 ALTER TABLE dominio.cuota_membresia
 ADD activo NOT NULL BIT DEFAULT 1; -- 1 = activo, 0 = borrado logico
@@ -514,6 +515,7 @@ BEGIN
 END;
 GO
 
+--=====================================================FACTURA=====================================================--
 CREATE OR ALTER PROCEDURE insertar_factura
     @nro_factura VARCHAR(20),
     @tipo_factura CHAR(20),
@@ -573,7 +575,7 @@ END;
 GO
 
 -- Al ser un documento legal, la factura no se puede modificar ni borrar
-
+--=====================================================DETALLE FACTURA=====================================================--
 ALTER TABLE dominio.detalle_factura
 ADD activo BIT NOT NULL DEFAULT 1;
 GO
@@ -657,6 +659,7 @@ ALTER TABLE dominio.pago
 ADD activo BIT NOT NULL DEFAULT 1;
 GO
 
+--=====================================================PAGO=====================================================--
 CREATE OR ALTER PROCEDURE insertar_pago
     @fecha_pago DATETIME,
     @medio_de_pago CHAR(30),

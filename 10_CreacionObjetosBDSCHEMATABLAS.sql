@@ -256,19 +256,22 @@ IF NOT EXISTS (
     WHERE TABLE_NAME = 'reserva_sum' AND TABLE_SCHEMA = 'dominio'
 )
 BEGIN
-	CREATE TABLE dominio.reserva_sum(
-		ID_reserva INT IDENTITY(1,1) PRIMARY KEY,
-		fecha_reserva DATETIME NOT NULL,
-		hora_desde TIME NOT NULL CHECK(hora_desde > 0),
-		hora_hasta TIME NOT NULL CHECK(hora_hasta > 0),
-		valor_hora DECIMAL(8,2) NOT NULL CHECK (valor_hora > 0),
-		id_socio INT NOT NULL,
-		borrado BIT NOT NULL DEFAULT 0,
-		fecha_borrado DATETIME,
-		CONSTRAINT FK_id_socio_reserva FOREIGN KEY (id_socio) 
-			REFERENCES dominio.socio(ID_socio),
-		CONSTRAINT CK_horarios_validos_entrada_sum CHECK (hora_desde <= hora_hasta)
-	);
+    CREATE TABLE dominio.reserva_sum(
+        ID_reserva INT IDENTITY(1,1) PRIMARY KEY,
+        fecha_reserva DATETIME NOT NULL,
+        hora_desde TIME NOT NULL CHECK(hora_desde >= '00:00:00'),
+        hora_hasta TIME NOT NULL CHECK(hora_hasta > '00:00:00'),
+        valor_hora DECIMAL(8,2) NOT NULL CHECK (valor_hora > 0),
+        id_socio INT NOT NULL,
+        borrado BIT NOT NULL DEFAULT 0,
+        fecha_borrado DATETIME,
+        CONSTRAINT FK_id_socio_reserva FOREIGN KEY (id_socio) 
+            REFERENCES dominio.socio(ID_socio),
+        CONSTRAINT CK_horarios_validos_entrada_sum CHECK (
+            hora_desde < hora_hasta AND
+            DATEDIFF(MINUTE, hora_desde, hora_hasta) > 0
+        )
+    );
 END
 GO
 

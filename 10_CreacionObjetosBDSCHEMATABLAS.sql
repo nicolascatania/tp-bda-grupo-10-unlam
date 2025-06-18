@@ -835,8 +835,6 @@ BEGIN
 END;
 GO
 
-<<<<<<< HEAD
-=======
 --=====================================================CUOTA MEMBRESIA=====================================================--
 ---------------SP DE CUOTA_MEMBRESIA, FACTURA, DETALLE_FACURA Y PAGO------------------------------------------------
 ALTER TABLE dominio.cuota_membresia
@@ -887,11 +885,11 @@ CREATE OR ALTER PROCEDURE eliminar_cuota_membresia -- eliminado logico
 AS
 BEGIN
 	SET NOCOUNT ON
-    IF NOT EXISTS (SELECT 1 FROM dominio.cuota_membresia WHERE ID_cuota = @ID_cuota AND activo = 1)
+    IF NOT EXISTS (SELECT 1 FROM dominio.cuota_membresia WHERE ID_cuota = @ID_cuota AND borrado = 0)
         BEGIN RAISERROR('La cuota no existe o ya fue eliminada.', 16, 1); RETURN; END
 
     UPDATE dominio.cuota_membresia
-    SET activo = 0
+    SET borrado = 1
     WHERE ID_cuota = @ID_cuota;
 END;
 GO
@@ -917,7 +915,6 @@ BEGIN
 END;
 GO
 
->>>>>>> dac6906cd47931c79658551b56437d57a86b72d6
 --======================================================Horario de actividad======================================================-- 
 
 --Insertar horario de actividad
@@ -1133,44 +1130,13 @@ CREATE OR ALTER PROCEDURE dominio.eliminar_descuento
     @ID_descuento INT
 AS
 BEGIN
-IF NOT EXISTS (SELECT 1 FROM dominio.descuento WHERE ID_descuento = @ID_descuento)
-    BEGIN
-        RAISERROR('El descuento especificado no existe', 16, 1);
-        RETURN;
-    END
-    DELETE FROM dominio.descuento
-    WHERE ID_descuento = @ID_descuento;
-<<<<<<< HEAD
-=======
-END
-	SET NOCOUNT ON
-    -- Validaciones
-    IF NOT EXISTS (SELECT 1 FROM dominio.cuota_membresia WHERE ID_cuota = @ID_cuota AND activo = 1)
-        BEGIN RAISERROR('La cuota no existe o fue eliminada.', 16, 1); RETURN; END
-
-    IF @mes < 1 OR @mes > 12
-        BEGIN RAISERROR('Mes invalido.', 16, 1); RETURN; END
-
-    IF @anio < 1900 OR @anio > YEAR(GETDATE()) + 1
-        BEGIN RAISERROR('Año invalido.', 16, 1); RETURN; END
-
-    IF @monto <= 0
-        BEGIN RAISERROR('El monto debe ser mayor a cero.', 16, 1); RETURN; END
-
-    IF LEN(RTRIM(@nombre_membresia)) = 0
-        BEGIN RAISERROR('Agregar nombre de membresia.', 16, 1); RETURN; END
-
-    IF @edad_minima IS NOT NULL AND @edad_maxima IS NOT NULL AND @edad_minima > @edad_maxima
-        BEGIN RAISERROR('Edad invalida.', 16, 1); RETURN; END
-
-    UPDATE dominio.cuota_membresia
-    SET mes = @mes,
-        anio = @anio,
-        monto = @monto,
-        nombre_membresia = @nombre_membresia,
-        edad_minima = @edad_minima,
-        edad_maxima = @edad_maxima
-    WHERE ID_cuota = @ID_cuota;
+	IF NOT EXISTS (SELECT 1 FROM dominio.descuento WHERE ID_descuento = @ID_descuento)
+		BEGIN
+			RAISERROR('El descuento especificado no existe', 16, 1);
+			RETURN;
+		END
+		DELETE FROM dominio.descuento
+		WHERE ID_descuento = @ID_descuento;
 END
 GO
 
@@ -1362,7 +1328,7 @@ CREATE OR ALTER PROCEDURE dominio.modificar_pago
 AS
 BEGIN
 	SET NOCOUNT ON
-    IF NOT EXISTS (SELECT 1 FROM dominio.pago WHERE ID_pago = @ID_pago AND activo = 1)
+    IF NOT EXISTS (SELECT 1 FROM dominio.pago WHERE ID_pago = @ID_pago AND borrado = 0)
     BEGIN
         RAISERROR('El pago no existe o está eliminado.', 16, 1);
         RETURN;
@@ -1400,7 +1366,7 @@ CREATE OR ALTER PROCEDURE dominio.eliminar_pago
     @ID_pago INT
 AS
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM dominio.pago WHERE ID_pago = @ID_pago AND activo = 1)
+    IF NOT EXISTS (SELECT 1 FROM dominio.pago WHERE ID_pago = @ID_pago AND borrado = 0)
     BEGIN
         RAISERROR('El pago no existe o ya está eliminado.', 16, 1);
         RETURN;
@@ -1412,7 +1378,7 @@ BEGIN
         RETURN;
     END
     UPDATE dominio.pago
-    SET activo = 0
+    SET borrado = 1
     WHERE ID_pago = @ID_pago;
 END
 GO

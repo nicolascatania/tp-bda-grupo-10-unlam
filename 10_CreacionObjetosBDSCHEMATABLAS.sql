@@ -649,9 +649,9 @@ GO
 
 /*
 	Modifica el nombre de rol en base a un id de rol dado
-	@param ID_rol			id para buscar en la tabla, si no existe, cancela la operación
+	@param ID_rol			id para buscar en la tabla, si no existe, cancela la operacion
 	@param nuevo_nombre_rol	indica el nuevo nombre a setear
-	@return 0 éxito, -1 error
+	@return					0 exito, -1 error
 */
 CREATE OR ALTER PROCEDURE dominio.modificar_rol
     @ID_rol INT,
@@ -707,7 +707,7 @@ GO
 */
 --==========================================Crear SP ABM socio==========================================--
 
-CREATE OR ALTER PROCEDURE dominio.sp_alta_socio
+CREATE OR ALTER PROCEDURE dominio.alta_socio
     @ID_usuario INT,
     @nombre VARCHAR(20),
     @apellido VARCHAR(20),

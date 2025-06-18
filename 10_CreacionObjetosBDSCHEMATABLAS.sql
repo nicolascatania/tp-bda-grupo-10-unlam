@@ -1,5 +1,7 @@
 -- Este script se encarga de generar los objetos necesarios para la persistencia de datos (bd, schemas y tablas)
 -- El script est√° dise√±ado para que pueda ejecutarse de una, por lotes, con el comando GO, verificando que ninguno de los objetos exista previamente.
+
+
 IF NOT EXISTS (
     SELECT name 
     FROM sys.databases 
@@ -43,90 +45,18 @@ GO
 IF NOT EXISTS (
     SELECT * 
     FROM INFORMATION_SCHEMA.TABLES 
-    WHERE TABLE_NAME = 'usuario' AND TABLE_SCHEMA = 'dominio'
-)
-BEGIN
-    CREATE TABLE dominio.usuario (
-        ID_usuario INT IDENTITY(1,1) PRIMARY KEY ,
-        nombre_usuario VARCHAR(20) NOT NULL,
-        contraseÒa VARCHAR(20) NOT NULL,
-        fecha_modificacion_contraseÒa DATETIME,
-        fecha_expiracion_contraseÒa DATETIME,
-        estado_usuario CHAR(15) DEFAULT 'activo', --estados: activo, inactivo, adeuda
-        CHECK (
-            LEN(contraseÒa) >= 8 AND
-            contraseÒa LIKE '%[0-9]%' AND        -- al menos un numero
-            contraseÒa LIKE '%[a-zA-Z]%' AND     -- al menos una letra
-            (
-			-- para caracteres especiales
-                contraseÒa LIKE '%!%' OR
-                contraseÒa LIKE '%@%' OR
-                contraseÒa LIKE '%#%' OR
-                contraseÒa LIKE '%$%' OR
-                contraseÒa LIKE '%^%' OR
-                contraseÒa LIKE '%&%' OR
-                contraseÒa LIKE '%*%' OR
-                contraseÒa LIKE '%(%' OR
-                contraseÒa LIKE '%)%'
-            )
-        )
-    );
-END
-
-ALTER TABLE dominio.usuario
-ADD borrado BIT NOT NULL DEFAULT 0; --0-> false no borrado, 1 -> true borrado
-
-
-IF NOT EXISTS (
-    SELECT * 
-    FROM INFORMATION_SCHEMA.TABLES 
-    WHERE TABLE_NAME = 'rol' AND TABLE_SCHEMA = 'dominio'
-)
-BEGIN
-	CREATE TABLE dominio.rol (
-		ID_rol INT IDENTITY(1,1) PRIMARY KEY,
-		nombre_rol CHAR(15),
-	);
-END
-GO
-
-ALTER TABLE dominio.rol
-ADD borrado BIT NOT NULL DEFAULT 0; --0-> false no borrado, 1 -> true borrado
-
-IF NOT EXISTS (
-    SELECT * 
-    FROM INFORMATION_SCHEMA.TABLES 
-    WHERE TABLE_NAME = 'rol_usuario' AND TABLE_SCHEMA = 'dominio'
-)
-BEGIN
-    CREATE TABLE dominio.rol_usuario (
-        ID_usuario INT,
-        ID_rol INT,
-        PRIMARY KEY (ID_usuario, ID_rol),
-        FOREIGN KEY (ID_usuario) REFERENCES dominio.usuario(ID_usuario),
-        FOREIGN KEY (ID_rol) REFERENCES dominio.rol(ID_rol)
-    );
-END
-GO
-
-
-
-
-IF NOT EXISTS (
-    SELECT * 
-    FROM INFORMATION_SCHEMA.TABLES 
     WHERE TABLE_NAME = 'grupo_familiar' AND TABLE_SCHEMA = 'dominio'
 )
 BEGIN
     CREATE TABLE dominio.grupo_familiar (
         ID_grupo_familiar INT IDENTITY(1,1) PRIMARY KEY,
-        cantidad_integrantes INT
+        cantidad_integrantes INT,
+		borrado BIT NOT NULL DEFAULT 0, --0 -> false no borrado, 1-> true borrado
+		fecha_borrado DATETIME
     );
 END
 GO
 
-ALTER TABLE dominio.grupo_familiar
-ADD borrado BIT NOT NULL DEFAULT 0; --0-> false no borrado, 1 -> true borrado
 
 
 IF NOT EXISTS (
@@ -137,11 +67,11 @@ IF NOT EXISTS (
 BEGIN
 	CREATE TABLE dominio.socio (
 		ID_socio INT IDENTITY(1,1) PRIMARY KEY,
-		nombre VARCHAR(20),
-		apellido VARCHAR(20),
-		fecha_nacimiento DATE, 
-		DNI CHAR(8) CHECK( CAST(DNI AS INT) > 0 AND CAST(DNI AS INT) <= 99999999 ),
-		telefono CHAR(10),
+		nombre VARCHAR(20) NOT NULL,
+		apellido VARCHAR(20) NOT NULL,
+		fecha_nacimiento DATE NOT NULL, 
+		DNI INT NOT NULL CHECK(DNI > 0 AND DNI <= 99999999),
+		telefono CHAR(10) NOT NULL,
 		telefono_de_emergencia VARCHAR(23),
 		obra_social VARCHAR(30),
 		nro_obra_social VARCHAR(30),
@@ -150,15 +80,21 @@ BEGIN
 		email VARCHAR(30),
 		id_grupo_familiar INT,
 		id_responsable_a_cargo INT, -- FK autoreferenciada
+		borrado BIT NOT NULL DEFAULT 0,
+		fecha_borrado DATETIME,
+		DNI_responsable INT CHECK(DNI_responsable > 0 AND DNI_responsable <= 99999999),
+		mail_responsable VARCHAR(30),
+		nombre_responsable VARCHAR(20),
+		apellido_responsable VARCHAR(20),
+		fecha_nacimiento_responsable DATE,
+		telefono_responsable CHAR(10),
+		parentezco_con_responsable CHAR(15),
 		CONSTRAINT FK_Socio_Responsable FOREIGN KEY (id_responsable_a_cargo)
 			REFERENCES dominio.socio(ID_socio),
 		CONSTRAINT FK_id_grupo_familiar FOREIGN KEY (id_grupo_familiar) REFERENCES dominio.grupo_familiar(ID_grupo_familiar)
 	);
 END
 GO
-
-ALTER TABLE dominio.socio
-ADD borrado BIT NOT NULL DEFAULT 0; --0-> false no borrado, 1 -> true borrado
 
 
 IF NOT EXISTS (
@@ -169,17 +105,18 @@ IF NOT EXISTS (
 BEGIN
     CREATE TABLE dominio.actividad (
         ID_actividad INT IDENTITY(1,1) PRIMARY KEY,
-        nombre_actividad CHAR(15),
-		costo_mensual DECIMAL(8,2),
-		edad_minima INT,
-		edad_maxima INT,
+        nombre_actividad CHAR(15) NOT NULL,
+		costo_mensual DECIMAL(8,2) NOT NULL CHECK(costo_mensual > 0),
+		edad_minima INT CHECK(edad_minima > 0),
+		edad_maxima INT CHECK(edad_maxima > 0),
+		borrado BIT NOT NULL DEFAULT 0,
+		fecha_borrado DATETIME,
 		CONSTRAINT CK_edades_validas CHECK (edad_minima <= edad_maxima)
     );
 END
 GO
 
-ALTER TABLE dominio.actividad
-ADD borrado BIT NOT NULL DEFAULT 0; --0-> false no borrado, 1 -> true borrado
+
 
 IF NOT EXISTS (
     SELECT * 
@@ -189,18 +126,18 @@ IF NOT EXISTS (
 BEGIN
     CREATE TABLE dominio.horario_de_actividad (
         ID_horario INT IDENTITY(1,1) PRIMARY KEY,
-        dia CHAR(10),
-		hora_inicio TIME,
-		hora_fin TIME,
+        dia CHAR(10) NOT NULL,
+		hora_inicio TIME NOT NULL,
+		hora_fin TIME NOT NULL,
 		id_actividad INT,
+		borrado BIT NOT NULL DEFAULT 0,
+		fecha_borrado DATETIME,
 		FOREIGN KEY (id_actividad) REFERENCES dominio.actividad(ID_actividad),
 		CONSTRAINT CK_horarios_validos CHECK (hora_inicio <= hora_fin)
     );
 END
 GO
 
-ALTER TABLE dominio.horario_de_actividad
-ADD borrado BIT NOT NULL DEFAULT 0; --0-> false no borrado, 1 -> true borrado
 
 IF NOT EXISTS (
     SELECT * 
@@ -208,25 +145,25 @@ IF NOT EXISTS (
     WHERE TABLE_NAME = 'factura' AND TABLE_SCHEMA = 'dominio'
 )
 BEGIN
+--esta tabla no lleva borrado porque no es legal modificarla
     CREATE TABLE dominio.factura (
         ID_factura INT IDENTITY(1,1) PRIMARY KEY,
-        nro_factura VARCHAR(20), 
+        nro_factura VARCHAR(20) CHECK(nro_factura > 0), 
 		tipo_factura CHAR(20),
 		fecha_emision DATETIME,
 		CAE CHAR(14), 
-		estado CHAR(9), --estado de mayor longitud PENDIENTE -> 9 caracteres, el otro es Pagada
-		importe_total DECIMAL(8,2),
+		estado CHAR(9) CHECK(estado in ('PENDIENTE', 'PAGADA', 'VENCIDA')), --estado de mayor longitud PENDIENTE -> 9 caracteres, el otro es Pagada
+		importe_total DECIMAL(8,2) CHECK (importe_total > 0),
 		razon_social_emisor CHAR(20),
 		CUIT_emisor INT, 
 		vencimiento_CAE DATETIME,
-		id_socio INT
+		id_socio INT,
 		FOREIGN KEY (id_socio) REFERENCES dominio.socio(ID_socio) 
     );
 END
 GO
 
-ALTER TABLE dominio.factura
-ADD borrado BIT NOT NULL DEFAULT 0; --0-> false no borrado, 1 -> true borrado
+
 
 IF NOT EXISTS (
     SELECT * 
@@ -236,17 +173,16 @@ IF NOT EXISTS (
 BEGIN
 	CREATE TABLE dominio.inscripcion_actividad (
 		ID_inscripcion INT IDENTITY(1,1) PRIMARY KEY,
-		fecha_inscripcion DATE,
+		fecha_inscripcion DATE NOT NULL,
 		id_actividad INT NOT NULL,
 		id_socio INT NOT NULL,
+		borrado BIT NOT NULL DEFAULT 0,
+		fecha_borrado DATETIME,
 		CONSTRAINT FK_id_socio_inscripcion FOREIGN KEY (id_socio) REFERENCES dominio.socio(ID_socio),
 		CONSTRAINT FK_id_actividad_inscripcion FOREIGN KEY (id_actividad) REFERENCES dominio.actividad(ID_actividad),
 	);
 END
 GO
-
-ALTER TABLE dominio.inscripcion_actividad
-ADD borrado BIT NOT NULL DEFAULT 0; --0-> false no borrado, 1 -> true borrado
 
 IF NOT EXISTS (
     SELECT * 
@@ -256,17 +192,16 @@ IF NOT EXISTS (
 BEGIN
 	CREATE TABLE dominio.asistencia (
 		ID_asistencia INT IDENTITY(1,1) PRIMARY KEY,
-		fecha DATE,
-		asistio BIT NOT NULL,
+		fecha DATE NOT NULL,
+		asistio BIT NOT NULL DEFAULT 0, -- 0 para no asistiÛ
 		id_inscripcion_actividad INT NOT NULL,
+		borrado BIT NOT NULL DEFAULT 0,
+		fecha_borrado DATETIME,
 		CONSTRAINT FK_id_inscripcion_actividad FOREIGN KEY (id_inscripcion_actividad) 
 			REFERENCES dominio.actividad(ID_actividad),
 	);
 END
 GO
-
-ALTER TABLE dominio.asistencia
-ADD borrado BIT NOT NULL DEFAULT 0; --0-> false no borrado, 1 -> true borrado
 
 
 IF NOT EXISTS (
@@ -280,20 +215,18 @@ BEGIN
 		mes TINYINT NOT NULL CHECK (mes > 0 AND mes <= 12),
 		anio INT NOT NULL,
 		monto DECIMAL(8,2) NOT NULL,
-		nombre_membresia CHAR(9) NOT NULL, -- Individual es el nombre de mayor longitud de los posibles nombres
-		edad_minima INT,
-		edad_maxima INT,
+		nombre_membresia CHAR(9) NOT NULL CHECK (nombre_membresia IN ('CADETE', 'MAYOR', 'MENOR')), -- Individual es el nombre de mayor longitud de los posibles nombres 
+		edad_minima INT CHECK(edad_minima > 0),
+		edad_maxima INT CHECK(edad_maxima > 0),
 		id_socio INT NOT NULL,
+		borrado BIT NOT NULL DEFAULT 0,
+		fecha_borrado DATETIME,
 		CONSTRAINT FK_id_socio_cuota_membresia FOREIGN KEY (id_socio) 
 			REFERENCES dominio.socio(ID_socio),
 		CONSTRAINT CK_edades_validas_membresia CHECK (edad_minima <= edad_maxima)
 	);
 END
 GO
-
-
-ALTER TABLE dominio.cuota_membresia
-ADD borrado BIT NOT NULL DEFAULT 0; --0-> false no borrado, 1 -> true borrado
 
 IF NOT EXISTS (
     SELECT * 
@@ -304,19 +237,19 @@ BEGIN
 	CREATE TABLE dominio.entrada_pileta(
 		ID_entrada INT IDENTITY(1,1) PRIMARY KEY,
 		fecha_entrada DATETIME NOT NULL,
-		monto_socio DECIMAL(10,2),
-		monto_invitado DECIMAL(8,2),
-		tipo_entrada_pileta CHAR(8), -- Toma como valores socio o invitado 
+		monto_socio DECIMAL(10,2) CHECK(monto_socio > 0),
+		monto_invitado DECIMAL(8,2) CHECK(monto_invitado > 0),
+		tipo_entrada_pileta CHAR(8) CHECK(tipo_entrada_pileta IN ('INVITADO', 'SOCIO')), -- Toma como valores socio o invitado 
 		fue_reembolsada BIT DEFAULT 0,
 		id_socio INT NOT NULL,
+		borrado BIT NOT NULL DEFAULT 0,
+		fecha_borrado DATETIME,
 		CONSTRAINT FK_id_socio FOREIGN KEY (id_socio) 
 			REFERENCES dominio.socio(ID_socio),
 	);
 END
 GO
 
-ALTER TABLE dominio.entrada_pileta
-ADD borrado BIT NOT NULL DEFAULT 0; --0-> false no borrado, 1 -> true borrado
 IF NOT EXISTS (
     SELECT * 
     FROM INFORMATION_SCHEMA.TABLES 
@@ -326,12 +259,15 @@ BEGIN
 	CREATE TABLE dominio.reserva_sum(
 		ID_reserva INT IDENTITY(1,1) PRIMARY KEY,
 		fecha_reserva DATETIME NOT NULL,
-		hora_desde TIME NOT NULL,
-		hora_hasta TIME NOT NULL,
-		valor_hora DECIMAL(8,2),
+		hora_desde TIME NOT NULL CHECK(hora_desde > 0),
+		hora_hasta TIME NOT NULL CHECK(hora_hasta > 0),
+		valor_hora DECIMAL(8,2) NOT NULL CHECK (valor_hora > 0),
 		id_socio INT NOT NULL,
+		borrado BIT NOT NULL DEFAULT 0,
+		fecha_borrado DATETIME,
 		CONSTRAINT FK_id_socio_reserva FOREIGN KEY (id_socio) 
 			REFERENCES dominio.socio(ID_socio),
+		CONSTRAINT CK_horarios_validos_entrada_sum CHECK (hora_desde <= hora_hasta)
 	);
 END
 GO
@@ -344,10 +280,12 @@ IF NOT EXISTS (
 BEGIN
 	CREATE TABLE dominio.detalle_factura(
 		ID_detalle_factura INT IDENTITY(1,1) PRIMARY KEY,
-		descripcion VARCHAR (70),
-		cantidad INT DEFAULT 1,
-		subtotal DECIMAL (10,2),
-		id_factura INT NOT NULL
+		descripcion VARCHAR(70) NOT NULL,
+		cantidad INT NOT NULL DEFAULT 1 CHECK(cantidad > 0),
+		subtotal DECIMAL (10,2) NOT NULL CHECK(subtotal > 0),
+		id_factura INT NOT NULL,
+		borrado BIT NOT NULL DEFAULT 0,
+		fecha_borrado DATETIME,
 		CONSTRAINT FK_id_factura FOREIGN KEY (id_factura) 
 			REFERENCES dominio.factura(ID_factura),
 	);
@@ -362,10 +300,12 @@ IF NOT EXISTS (
 BEGIN
 	CREATE TABLE dominio.descuento(
 		ID_descuento INT IDENTITY(1,1) PRIMARY KEY,
-		descripcion VARCHAR (70),
-		tipo_descuento CHAR(30),
-		porcentaje DECIMAL (3,2), -- 0,06 0,90 0,50 y as√≠ tomaran los valores
-		id_detalle_factura INT NOT NULL
+		descripcion VARCHAR (70) NOT NULL,
+		tipo_descuento CHAR(30) NOT NULL CHECK(tipo_descuento IN ('INSCRIPCION_FAMILIAR', 'DESCUENTO_POR_MAS_DE_UNA_ACTIVIDAD')),  
+		porcentaje DECIMAL (3,2) NOT NULL CHECK(porcentaje > 0 AND porcentaje < 1), -- 0,06 0,90 0,50 y asi tomaran los valores
+		id_detalle_factura INT NOT NULL,
+		borrado BIT NOT NULL DEFAULT 0,
+		fecha_borrado DATETIME,
 		CONSTRAINT FK_id_detalle_factura FOREIGN KEY (id_detalle_factura) 
 			REFERENCES dominio.detalle_factura(ID_detalle_factura),
 	);
@@ -381,9 +321,11 @@ BEGIN
 	CREATE TABLE dominio.pago(
 		ID_pago INT IDENTITY(1,1) PRIMARY KEY,
 		fecha_pago DATETIME,
-		medio_de_pago CHAR(30),
-		monto DECIMAL (8,2), 
-		estado CHAR (10), --'Pagado' 'No Pagado'
+		medio_de_pago CHAR(30) CHECK(medio_de_pago IN ('MASTERCARD', 'VISA', 'TARJETA_NARANJA', 'MERCADOPAGO_TRANSFERENCIA', 'PAGOFACIL', 'RAPIPAGO')),
+		monto DECIMAL (8,2) NOT NULL CHECK(monto > 0), 
+		estado CHAR (10) NOT NULL CHECK(estado IN ('PAGADO', 'PENDIENTE', 'RECHAZADO')),
+		borrado BIT NOT NULL DEFAULT 0,
+		fecha_borrado DATETIME,
 		id_factura INT NOT NULL
 		CONSTRAINT FK_id_factura_pago FOREIGN KEY (id_factura) 
 			REFERENCES dominio.factura(ID_factura),
@@ -391,9 +333,6 @@ BEGIN
 END
 GO
 
-ALTER TABLE dominio.pago
-ADD activo BIT NOT NULL DEFAULT 1;
-GO
 
 IF NOT EXISTS (
     SELECT * 
@@ -404,9 +343,11 @@ BEGIN
 	CREATE TABLE dominio.reembolso (
 		ID_reembolso INT IDENTITY(1,1) PRIMARY KEY,
 		fecha_reembolso DATETIME,
-		motivo_reembolso CHAR(30),
-		monto DECIMAL (8,2), 
-		id_factura INT NOT NULL
+		motivo_reembolso CHAR(30) NOT NULL,
+		monto DECIMAL(8,2) NOT NULL CHECK(monto > 0), 
+		id_factura INT NOT NULL,
+		borrado BIT NOT NULL DEFAULT 0,
+		fecha_borrado DATETIME,
 		CONSTRAINT FK_id_factura_reembolso FOREIGN KEY (id_factura) 
 			REFERENCES dominio.factura(ID_factura),
 	);
@@ -421,11 +362,13 @@ IF NOT EXISTS (
 BEGIN
 	CREATE TABLE dominio.deuda(
 		ID_deuda INT IDENTITY(1,1) PRIMARY KEY,
-		recargo_por_vencimiento DECIMAL (3,2),
-		deuda_acumulada DECIMAL (10,2),
+		recargo_por_vencimiento DECIMAL (3,2) NOT NULL CHECK(recargo_por_vencimiento = 0.15 OR recargo_por_vencimiento = 0.10),
+		deuda_acumulada DECIMAL (10,2) NOT NULL CHECK (deuda_acumulada > 0),
 		fecha_readmision DATE,
 		id_factura INT NOT NULL,
 		id_socio INT NOT NULL,
+		borrado BIT NOT NULL DEFAULT 0,
+		fecha_borrado DATETIME,
 		CONSTRAINT FK_id_factura_deuda FOREIGN KEY (id_factura) 
 			REFERENCES dominio.factura(ID_factura),
 		CONSTRAINT FK_id_socio_deuda FOREIGN KEY (id_socio)
@@ -453,291 +396,7 @@ GO
 
 --=====================================================CREACIONES DE SP PARA ABM DE CADA TABLA=====================================================--
 
---=====================================================TABLA USUARIO=====================================================--	
-/**
-	El siguiente SP da de alta un usuario
-	Valida que la contrase√±a cumpla los requerimientos marcados en el check de la tabla usuario, para generar un raiserror con una indicaci√≥n clara del motivo de falla
-	Valida que nombre de usuario sea √∫nico
-	Setea la fecha de creaci√≥n de contrase√±a a hoy y la fecha de expiraci√≥n a dentro de un a√±o
-	Encripta la contrase√±a
-	@param	nombre_usuario indica el nombre de usuario a dar de alta
-	@param	contrase√±a	   indica la contrase√±a a ingresar		
-*/
-CREATE OR ALTER PROCEDURE dominio.alta_usuario
-    @nombre_usuario VARCHAR(20),
-    @contraseÒa VARCHAR(20)
-AS
-BEGIN
-	SET NOCOUNT ON;
 
-    IF LEN(@contraseÒa) < 8 OR 
-       @contraseÒa NOT LIKE '%[0-9]%' OR
-       @contraseÒa NOT LIKE '%[a-zA-Z]%' OR
-       (@contraseÒa NOT LIKE '%!%' AND
-        @contraseÒa NOT LIKE '%@%' AND
-        @contraseÒa NOT LIKE '%#%' AND
-        @contraseÒa NOT LIKE '%$%' AND
-        @contraseÒa NOT LIKE '%^%' AND
-        @contraseÒa NOT LIKE '%&%' AND
-        @contraseÒa NOT LIKE '%*%' AND
-        @contraseÒa NOT LIKE '%(%' AND
-        @contraseÒa NOT LIKE '%)%')
-    BEGIN
-        RAISERROR('La contrase√±a no cumple con los requisitos de seguridad', 16, 1)
-        RETURN
-    END
-
-    IF EXISTS (SELECT 1 FROM dominio.usuario WHERE nombre_usuario = @nombre_usuario)
-    BEGIN
-        RAISERROR('El nombre de usuario ya existe', 16, 1)
-        RETURN
-    END
-    INSERT INTO dominio.usuario (
-        nombre_usuario, 
-        contraseÒa, 
-        fecha_modificacion_contraseÒa, 
-        fecha_expiracion_contraseÒa,
-        estado_usuario
-    )
-    VALUES (
-        @nombre_usuario, 
-        @contraseÒa, 
-        GETDATE(),
-        DATEADD(YEAR, 1, GETDATE()),
-        'activo'
-    )
-    
-    PRINT 'Usuario creado exitosamente'
-END
-GO
-
-
-/**
-	Este SP borra un usuario de manera logica (cambia estado a 'inactivo')
-	@param	ID_usuario indica el ID del usuario a dar de baja
-	@return 0 si √©xito, -1 si error
-*/
-CREATE OR ALTER PROCEDURE dominio.baja_usuario
-    @ID_usuario INT
-AS
-BEGIN
-    SET NOCOUNT ON;
-    
-    BEGIN TRY
-        IF NOT EXISTS (SELECT 1 FROM dominio.usuario WHERE ID_usuario = @ID_usuario)
-        BEGIN
-            RAISERROR('El usuario con ID %d no existe', 16, 1, @ID_usuario);
-            RETURN -1;
-        END
-        
-        IF EXISTS (SELECT 1 FROM dominio.usuario WHERE ID_usuario = @ID_usuario AND estado_usuario = 'inactivo')
-        BEGIN
-            RAISERROR('El usuario con ID %d ya est√° inactivo', 16, 1, @ID_usuario);
-            RETURN -1;
-        END
-        
-        UPDATE dominio.usuario 
-        SET estado_usuario = 'inactivo' WHERE ID_usuario = @ID_usuario;
-        
-        PRINT 'Usuario dado de baja exitosamente';
-        RETURN 0;
-    END TRY
-    BEGIN CATCH
-        DECLARE @ErrorMessage NVARCHAR(4000) = ERROR_MESSAGE();
-        RAISERROR('Error al dar de baja usuario: %s', 16, 1, @ErrorMessage);
-        RETURN -1;
-    END CATCH
-END
-GO
-
-
-/**
-    El siguiente SP modifica los datos de un usuario existente, puede ser el nombre de usuario o la contrase√±a
-    @param ID_usuario indica el ID del usuario a modificar (obligatorio para encontrar el usuario en cuesti√≥n, o terminar si no existe)
-    @param nuevo_nombre_usuario nuevo nombre de usuario (opcional), si se indica, se valida que no exista un nombre de usuario como el ingresado, mantenemos la unicidad de los nombres de usuario
-    @param nueva_contrase√±a nueva contrase√±a (opcional, debe cumplir requisitos) si se indica, se actualizan las fechas de modificado y vencimiento, adem√°s se realizan las validaciones correspondientes
-    @param nuevo_estado nuevo estado (opcional: 'activo'/'inactivo'/'adeuda')
-    @return 0 si √©xito, -1 si error
-*/
-CREATE OR ALTER PROCEDURE dominio.modificar_usuario
-    @ID_usuario INT,
-    @nuevo_nombre_usuario VARCHAR(20) = NULL,
-    @nueva_contraseÒa VARCHAR(20) = NULL,
-    @nuevo_estado VARCHAR(15) = NULL
-AS
-BEGIN
-    SET NOCOUNT ON;
-    
-    BEGIN TRY
-        IF NOT EXISTS (SELECT 1 FROM dominio.usuario WHERE ID_usuario = @ID_usuario)
-        BEGIN
-            RAISERROR('El usuario con ID %d no existe', 16, 1, @ID_usuario);
-            RETURN -1;
-        END
-
-        IF @nuevo_nombre_usuario IS NOT NULL
-        BEGIN
-            IF EXISTS (SELECT 1 FROM dominio.usuario 
-                      WHERE nombre_usuario = @nuevo_nombre_usuario AND ID_usuario <> @ID_usuario)
-            BEGIN
-                RAISERROR('El nombre de usuario "%s" ya esta en uso', 16, 1, @nuevo_nombre_usuario);
-                RETURN -1;
-            END
-            
-            UPDATE dominio.usuario 
-            SET nombre_usuario = @nuevo_nombre_usuario
-            WHERE ID_usuario = @ID_usuario;
-        END
-
-        IF @nueva_contraseÒa IS NOT NULL
-        BEGIN
-            IF LEN(@nueva_contraseÒa) < 8 OR 
-               @nueva_contraseÒa NOT LIKE '%[0-9]%' OR
-               @nueva_contraseÒa NOT LIKE '%[a-zA-Z]%' OR
-               @nueva_contraseÒa NOT LIKE '%[!@#$%^&*()]%'
-            BEGIN
-                RAISERROR('La contrase√±a debe tener al menos 8 caracteres, incluir n√∫meros, letras y un caracter especial (!@#$%^&*)', 16, 1);
-                RETURN -1;
-            END
-            
-            UPDATE dominio.usuario 
-            SET contraseÒa = @nueva_contraseÒa,
-                fecha_modificacion_contraseÒa = GETDATE(),
-                fecha_expiracion_contraseÒa = DATEADD(YEAR, 1, GETDATE())
-            WHERE ID_usuario = @ID_usuario;
-        END
-
-        IF @nuevo_estado IS NOT NULL
-        BEGIN
-            IF @nuevo_estado NOT IN ('activo', 'inactivo', 'adeuda')
-            BEGIN
-                RAISERROR('Estado invalido. Valores permitidos: "activo", "inactivo" o "adeuda"', 16, 1);
-                RETURN -1;
-            END
-            
-            UPDATE dominio.usuario 
-            SET estado_usuario = @nuevo_estado
-            WHERE ID_usuario = @ID_usuario;
-        END
-
-        IF @nuevo_nombre_usuario IS NULL AND 
-           @nueva_contraseÒa IS NULL AND 
-           @nuevo_estado IS NULL
-        BEGIN
-            RAISERROR('No se proporcionaron datos para modificar', 16, 1);
-            RETURN -1;
-        END
-
-        PRINT 'Usuario modificado exitosamente';
-        RETURN 0;
-    END TRY
-    BEGIN CATCH
-        DECLARE @ErrorMessage NVARCHAR(4000) = ERROR_MESSAGE();
-        RAISERROR('Error al modificar usuario: %s', 16, 1, @ErrorMessage);
-        RETURN -1;
-    END CATCH
-END
-GO
-
---=====================================================TABLA ROL=====================================================--
-/**
-	Da de alta un nuevo rol
-	@param nombre_rol	nombre que indica el usuario para crear un nuevo rol
-*/
-CREATE OR ALTER PROCEDURE dominio.alta_rol
-    @nombre_rol VARCHAR(15)
-AS
-BEGIN
-    SET NOCOUNT ON;
-    
-    BEGIN TRY
-        IF LEN(TRIM(@nombre_rol)) = 0
-        BEGIN
-            RAISERROR('El nombre del rol no puede estar vaci≠o', 16, 1);
-            RETURN -1;
-        END
-        
-        IF EXISTS (
-            SELECT 1 FROM dominio.rol 
-            WHERE nombre_rol = @nombre_rol
-        )
-        BEGIN
-            RAISERROR('El rol "%s" ya existe', 16, 1, @nombre_rol);
-            RETURN -1;
-        END
-        
-        INSERT INTO dominio.rol (nombre_rol)
-        VALUES (@nombre_rol);
-        
-        PRINT 'Rol creado exitosamente';
-        RETURN 0;
-    END TRY
-    BEGIN CATCH
-        DECLARE @ErrorMessage NVARCHAR(4000) = ERROR_MESSAGE();
-        RAISERROR('Error al crear rol: %s', 16, 1, @ErrorMessage);
-        RETURN -1;
-    END CATCH
-END
-GO
-
-/*
-	Modifica el nombre de rol en base a un id de rol dado
-	@param ID_rol			id para buscar en la tabla, si no existe, cancela la operacion
-	@param nuevo_nombre_rol	indica el nuevo nombre a setear
-	@return					0 exito, -1 error
-*/
-CREATE OR ALTER PROCEDURE dominio.modificar_rol
-    @ID_rol INT,
-    @nuevo_nombre_rol VARCHAR(15)
-AS
-BEGIN
-    SET NOCOUNT ON;
-    
-    BEGIN TRY
-        IF NOT EXISTS (SELECT 1 FROM dominio.rol WHERE ID_rol = @ID_rol)
-        BEGIN
-            RAISERROR('El rol con ID %d no existe', 16, 1, @ID_rol);
-            RETURN -1;
-        END
-
-        IF LEN(TRIM(@nuevo_nombre_rol)) = 0
-        BEGIN
-            RAISERROR('El nombre del rol no puede estar vacio', 16, 1);
-            RETURN -1;
-        END
-        
-        IF EXISTS (
-            SELECT 1 FROM dominio.rol 
-            WHERE nombre_rol = @nuevo_nombre_rol 
-            AND ID_rol <> @ID_rol
-        )
-        BEGIN
-            RAISERROR('El nombre de rol "%s" ya esta en uso por otro rol', 16, 1, @nuevo_nombre_rol);
-            RETURN -1;
-        END
-
-        UPDATE dominio.rol 
-        SET nombre_rol = @nuevo_nombre_rol
-        WHERE ID_rol = @ID_rol;
-        
-        PRINT 'Rol modificado exitosamente';
-        RETURN 0;
-    END TRY
-    BEGIN CATCH
-        DECLARE @ErrorMessage NVARCHAR(4000) = ERROR_MESSAGE();
-        RAISERROR('Error al modificar rol: %s', 16, 1, @ErrorMessage);
-        RETURN -1;
-    END CATCH
-END
-GO
-
-/*
-	Consideramos que no es eficiente implementar una baja de rol, es preferible cambiar el nombre de ese rol
-	ya que rol se relaciona con usuario (N:N) generando la tabla rol_usuario, realizar una baja seria un problema en la logica de negocios
-	Si tenemos muchos usuarios con el rol adeuda (que indica que tienen deudas y no han pagado), y por alguna razon le borramos el rol
-	esa persona no queda sin rol o le pone por default activo, concluimos que simplemente es mejor cambiar de nombre el rol por algun otro.
-	Ademas, creemos que no sera una operacion usada con frecuencia, sumando otro motivo para no realizarla.
-*/
 --==========================================Crear SP ABM socio==========================================--
 
 CREATE OR ALTER PROCEDURE dominio.alta_socio

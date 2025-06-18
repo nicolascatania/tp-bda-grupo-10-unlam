@@ -250,6 +250,8 @@ BEGIN
 END
 GO
 
+
+
 IF NOT EXISTS (
     SELECT * 
     FROM INFORMATION_SCHEMA.TABLES 
@@ -274,6 +276,7 @@ BEGIN
     );
 END
 GO
+
 
 IF NOT EXISTS (
     SELECT * 
@@ -1382,3 +1385,136 @@ BEGIN
     WHERE ID_pago = @ID_pago;
 END
 GO
+
+
+--=====================================================ReservaSUM=====================================================--
+/**
+	Este sp da de alta una reserva de sum, con parámetros indicados según el usuario. Las validaciones importantes ya son hechas por checks en la tabla dominio.reserva_sum
+	@param	fecha_reserva	fecha para la cual se reserva el sum, no de cuando se efectúa la transacción de la reserva como tal
+	@param	hora_desde		hora inicial de la reserva
+	@param	hora_hasta		hora donde finaliza la reserva
+	@param	valor_hora		valor hora de la reserva de sum
+*/
+CREATE OR ALTER PROCEDURE dominio.crear_reserva_sum
+    @fecha_reserva DATETIME,
+    @hora_desde TIME,
+    @hora_hasta TIME,
+    @valor_hora DECIMAL(8,2)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    INSERT INTO dominio.reserva_sum (
+        fecha_reserva, 
+        hora_desde, 
+        hora_hasta, 
+        valor_hora
+    )
+    VALUES (
+        @fecha_reserva,
+        @hora_desde,
+        @hora_hasta,
+        @valor_hora
+    );
+END
+GO
+
+
+/**
+	Este sp borra de manera lógica la reserva de sum
+	@param	ID_reserva	id que identifica la reserva a borrar
+*/
+CREATE OR ALTER PROCEDURE dominio.eliminar_reserva_sum
+    @ID_reserva INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    UPDATE dominio.reserva_sum
+    SET borrado = 1,
+       fecha_borrado = GETDATE()
+    WHERE ID_reserva = @ID_reserva;
+END
+GO
+
+/**
+	Este sp modifica un registro de reserva_sum
+	@param	ID_reserva		id para identificar el registro que se quiere modificar
+	@param	fecha_reserva	fecha para la cual se reserva el sum, no de cuando se efectúa la transacción de la reserva como tal
+	@param	hora_desde		hora inicial de la reserva
+	@param	hora_hasta		hora donde finaliza la reserva
+	@param	valor_hora		valor hora de la reserva de sum
+	@param	id_socio		por si se desea cambiar el socio a cargo de la reserva por algún motivo
+*/
+CREATE OR ALTER PROCEDURE dominio.modificar_reserva_sum
+    @ID_reserva INT,
+    @fecha_reserva DATETIME,
+    @hora_desde TIME,
+    @hora_hasta TIME,
+    @valor_hora DECIMAL(8,2),
+    @id_socio INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    UPDATE dominio.reserva_sum
+    SET fecha_reserva = @fecha_reserva,
+        hora_desde = @hora_desde,
+        hora_hasta = @hora_hasta,
+        valor_hora = @valor_hora,
+        id_socio = @id_socio
+    WHERE ID_reserva = @ID_reserva;
+END
+GO
+
+
+--=====================================================ReservaSUM=====================================================--
+/**
+	Este sp da de alta una entrada de pileta, las validaciones de campos están hechas con checks en la tabla entrada_pileta a la que se hace referencia
+	Acá solo validamos que el monto para invitado y socio sean indicados uno sí y el otro no, siempre un monto debe ser indicado, unicamente uno de ellos.
+	@param	fecha_entrada			fecha donde se compra la entrada
+	@param	monto_socio				opcional, si es indicado, representa el costo de la entrada para un socio, no pueden ser indicados ambos al mismo tiempo.
+	@param	monto_invitado			opcional, si es indicado, representa el costo de la entrada para un invitado, no pueden ser indicados ambos al mismo tiempo.
+	@param	tipo_entrada_invitado	indica de manera más clara, textual, de si la entrada es emitida para un socio o un invitado.
+	@param	id_socio				socio asociado a la entrada, no le vendemos directamente entradas a un invitado, sino siempre a un socio.
+*/
+CREATE OR ALTER PROCEDURE dominio.crear_entrada_pileta
+    @fecha_entrada DATETIME,
+    @monto_socio DECIMAL(10,2),
+    @monto_invitado DECIMAL(8,2),
+    @tipo_entrada_pileta CHAR(8),
+    @id_socio INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+	IF (@monto_invitado IS NOT NULL AND @monto_socio IS NOT NULL)
+	BEGIN
+		RAISERROR('No deben ser indicados ambos montos al mismo tiempo, solo permitimos uno.', 16,1);
+	END
+
+	IF(@monto_invitado IS NULL AND @monto_socio IS NULL)
+		BEGIN
+		RAISERROR('Al menos uno de los montos debe ser establecido.', 16,1);
+	END
+
+    INSERT INTO dominio.entrada_pileta (
+        fecha_entrada,
+        monto_socio,
+        monto_invitado,
+        tipo_entrada_pileta,
+        id_socio
+    )
+    VALUES (
+        @fecha_entrada,
+        @monto_socio,
+        @monto_invitado,
+        @tipo_entrada_pileta,
+        @id_socio
+    );
+END
+GO
+
+/**
+	No tiene sentido que una entrada pueda modificarse o borrarse
+**/

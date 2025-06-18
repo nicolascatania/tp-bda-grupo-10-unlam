@@ -55,7 +55,7 @@ BEGIN
         estado_usuario CHAR(15) DEFAULT 'activo', --estados: activo, inactivo, adeuda
         CHECK (
             LEN(contraseña) >= 8 AND
-            contraseña LIKE '%[0-9]%' AND        -- al menos un nÃºmero
+            contraseña LIKE '%[0-9]%' AND        -- al menos un numero
             contraseña LIKE '%[a-zA-Z]%' AND     -- al menos una letra
             (
 			-- para caracteres especiales
@@ -73,6 +73,9 @@ BEGIN
     );
 END
 
+ALTER TABLE dominio.usuario
+ADD borrado BIT NOT NULL DEFAULT 0; --0-> false no borrado, 1 -> true borrado
+
 
 IF NOT EXISTS (
     SELECT * 
@@ -86,6 +89,9 @@ BEGIN
 	);
 END
 GO
+
+ALTER TABLE dominio.rol
+ADD borrado BIT NOT NULL DEFAULT 0; --0-> false no borrado, 1 -> true borrado
 
 IF NOT EXISTS (
     SELECT * 
@@ -104,6 +110,8 @@ END
 GO
 
 
+
+
 IF NOT EXISTS (
     SELECT * 
     FROM INFORMATION_SCHEMA.TABLES 
@@ -116,6 +124,9 @@ BEGIN
     );
 END
 GO
+
+ALTER TABLE dominio.grupo_familiar
+ADD borrado BIT NOT NULL DEFAULT 0; --0-> false no borrado, 1 -> true borrado
 
 
 IF NOT EXISTS (
@@ -146,6 +157,9 @@ BEGIN
 END
 GO
 
+ALTER TABLE dominio.socio
+ADD borrado BIT NOT NULL DEFAULT 0; --0-> false no borrado, 1 -> true borrado
+
 
 IF NOT EXISTS (
     SELECT * 
@@ -164,6 +178,9 @@ BEGIN
 END
 GO
 
+ALTER TABLE dominio.actividad
+ADD borrado BIT NOT NULL DEFAULT 0; --0-> false no borrado, 1 -> true borrado
+
 IF NOT EXISTS (
     SELECT * 
     FROM INFORMATION_SCHEMA.TABLES 
@@ -181,6 +198,9 @@ BEGIN
     );
 END
 GO
+
+ALTER TABLE dominio.horario_de_actividad
+ADD borrado BIT NOT NULL DEFAULT 0; --0-> false no borrado, 1 -> true borrado
 
 IF NOT EXISTS (
     SELECT * 
@@ -205,6 +225,9 @@ BEGIN
 END
 GO
 
+ALTER TABLE dominio.factura
+ADD borrado BIT NOT NULL DEFAULT 0; --0-> false no borrado, 1 -> true borrado
+
 IF NOT EXISTS (
     SELECT * 
     FROM INFORMATION_SCHEMA.TABLES 
@@ -222,6 +245,9 @@ BEGIN
 END
 GO
 
+ALTER TABLE dominio.inscripcion_actividad
+ADD borrado BIT NOT NULL DEFAULT 0; --0-> false no borrado, 1 -> true borrado
+
 IF NOT EXISTS (
     SELECT * 
     FROM INFORMATION_SCHEMA.TABLES 
@@ -238,6 +264,9 @@ BEGIN
 	);
 END
 GO
+
+ALTER TABLE dominio.asistencia
+ADD borrado BIT NOT NULL DEFAULT 0; --0-> false no borrado, 1 -> true borrado
 
 
 IF NOT EXISTS (
@@ -262,9 +291,8 @@ BEGIN
 END
 GO
 
-
-
-
+ALTER TABLE dominio.cuota_membresia
+ADD borrado BIT NOT NULL DEFAULT 0; --0-> false no borrado, 1 -> true borrado
 
 IF NOT EXISTS (
     SELECT * 
@@ -285,6 +313,11 @@ BEGIN
 	);
 END
 GO
+
+
+ALTER TABLE dominio.entrada_pileta
+ADD borrado BIT NOT NULL DEFAULT 0; --0-> false no borrado, 1 -> true borrado
+
 
 
 
@@ -1082,6 +1115,66 @@ GO
 CREATE OR ALTER PROCEDURE dominio.insertar_actividad
 	@nombre_actividad CHAR(15),
     @costo_mensual DECIMAL(8,2),
+    @edad_minima INT,
+    @edad_maxima INT
+AS
+BEGIN
+ IF @edad_minima > @edad_maxima
+    BEGIN
+        RAISERROR('La edad minima no puede ser mayor que la edad maxima.', 16, 1);
+        RETURN;
+    END
+
+    INSERT INTO dominio.actividad (nombre_actividad, costo_mensual, edad_minima, edad_maxima)
+    VALUES (@nombre_actividad, @costo_mensual, @edad_minima, @edad_maxima);
+END;
+GO
+
+
+--Modificar actividad
+CREATE OR ALTER PROCEDURE dominio.modificar_actividad
+    @ID_actividad INT,
+    @nombre_actividad VARCHAR(15) = NULL,
+    @costo_mensual DECIMAL(8,2) = NULL,
+    @edad_minima INT = NULL,
+    @edad_maxima INT = NULL
+AS
+BEGIN
+	IF NOT EXISTS (SELECT 1 FROM dominio.actividad WHERE ID_actividad = @ID_actividad)
+		BEGIN
+			RAISERROR('La actividad especificada no existe.', 16, 1);
+			RETURN;
+		END
+    IF @edad_minima > @edad_maxima
+		BEGIN
+			RAISERROR('La edad minima no puede ser mayor que la edad maxima.', 16, 1);
+			RETURN;
+		END
+
+    UPDATE dominio.actividad
+    SET nombre_actividad = ISNULL(@nombre_actividad, nombre_actividad),
+        costo_mensual = ISNULL(@costo_mensual, costo_mensual),
+        edad_minima = ISNULL(@edad_minima, edad_minima),
+        edad_maxima = ISNULL(@edad_maxima, edad_maxima)
+    WHERE ID_actividad = @ID_actividad;
+END;
+GO
+
+--Borrar actividad
+CREATE OR ALTER PROCEDURE dominio.borrar_actividad
+	@ID_actividad INT
+	AS
+BEGIN
+	IF NOT EXISTS (SELECT 1 FROM dominio.actividad WHERE ID_actividad = @ID_actividad)
+		BEGIN
+			RAISERROR('La actividad especificada no existe.', 16, 1);
+			RETURN;
+		END
+    DELETE FROM dominio.actividad
+    WHERE ID_actividad = @ID_actividad;
+END;
+GO
+
 --=====================================================CUOTA MEMBRESIA=====================================================--
 ---------------SP DE CUOTA_MEMBRESIA, FACTURA, DETALLE_FACURA Y PAGO------------------------------------------------
 ALTER TABLE dominio.cuota_membresia
@@ -1159,50 +1252,6 @@ BEGIN
 
     INSERT INTO dominio.actividad (nombre_actividad, costo_mensual, edad_minima, edad_maxima)
     VALUES (@nombre_actividad, @costo_mensual, @edad_minima, @edad_maxima);
-END;
-GO
-
---Modificar actividad
-CREATE OR ALTER PROCEDURE dominio.modificar_actividad
-    @ID_actividad INT,
-    @nombre_actividad VARCHAR(15) = NULL,
-    @costo_mensual DECIMAL(8,2) = NULL,
-    @edad_minima INT = NULL,
-    @edad_maxima INT = NULL
-AS
-BEGIN
-	IF NOT EXISTS (SELECT 1 FROM dominio.actividad WHERE ID_actividad = @ID_actividad)
-		BEGIN
-			RAISERROR('La actividad especificada no existe.', 16, 1);
-			RETURN;
-		END
-    IF @edad_minima > @edad_maxima
-		BEGIN
-			RAISERROR('La edad minima no puede ser mayor que la edad maxima.', 16, 1);
-			RETURN;
-		END
-
-    UPDATE dominio.actividad
-    SET nombre_actividad = ISNULL(@nombre_actividad, nombre_actividad),
-        costo_mensual = ISNULL(@costo_mensual, costo_mensual),
-        edad_minima = ISNULL(@edad_minima, edad_minima),
-        edad_maxima = ISNULL(@edad_maxima, edad_maxima)
-    WHERE ID_actividad = @ID_actividad;
-END;
-GO
-
---Borrar actividad
-CREATE OR ALTER PROCEDURE dominio.borrar_actividad
-	@ID_actividad INT
-	AS
-BEGIN
-	IF NOT EXISTS (SELECT 1 FROM dominio.actividad WHERE ID_actividad = @ID_actividad)
-		BEGIN
-			RAISERROR('La actividad especificada no existe.', 16, 1);
-			RETURN;
-		END
-    DELETE FROM dominio.actividad
-    WHERE ID_actividad = @ID_actividad;
 END;
 GO
 

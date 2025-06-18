@@ -49,29 +49,32 @@ BEGIN
     CREATE TABLE dominio.usuario (
         ID_usuario INT IDENTITY(1,1) PRIMARY KEY ,
         nombre_usuario VARCHAR(20) NOT NULL,
-        contrase√±a VARCHAR(20) NOT NULL,
-        fecha_modificacion_contrase√±a DATETIME,
-        fecha_expiracion_contrase√±a DATETIME,
+        contraseÒa VARCHAR(20) NOT NULL,
+        fecha_modificacion_contraseÒa DATETIME,
+        fecha_expiracion_contraseÒa DATETIME,
         estado_usuario CHAR(15) DEFAULT 'activo', --estados: activo, inactivo, adeuda
         CHECK (
-            LEN(contrase√±a) >= 8 AND
-            contrase√±a LIKE '%[0-9]%' AND        -- al menos un n√∫mero
-            contrase√±a LIKE '%[a-zA-Z]%' AND     -- al menos una letra
+            LEN(contraseÒa) >= 8 AND
+            contraseÒa LIKE '%[0-9]%' AND        -- al menos un numero
+            contraseÒa LIKE '%[a-zA-Z]%' AND     -- al menos una letra
             (
 			-- para caracteres especiales
-                contrase√±a LIKE '%!%' OR
-                contrase√±a LIKE '%@%' OR
-                contrase√±a LIKE '%#%' OR
-                contrase√±a LIKE '%$%' OR
-                contrase√±a LIKE '%^%' OR
-                contrase√±a LIKE '%&%' OR
-                contrase√±a LIKE '%*%' OR
-                contrase√±a LIKE '%(%' OR
-                contrase√±a LIKE '%)%'
+                contraseÒa LIKE '%!%' OR
+                contraseÒa LIKE '%@%' OR
+                contraseÒa LIKE '%#%' OR
+                contraseÒa LIKE '%$%' OR
+                contraseÒa LIKE '%^%' OR
+                contraseÒa LIKE '%&%' OR
+                contraseÒa LIKE '%*%' OR
+                contraseÒa LIKE '%(%' OR
+                contraseÒa LIKE '%)%'
             )
         )
     );
 END
+
+ALTER TABLE dominio.usuario
+ADD borrado BIT NOT NULL DEFAULT 0; --0-> false no borrado, 1 -> true borrado
 
 
 IF NOT EXISTS (
@@ -86,6 +89,9 @@ BEGIN
 	);
 END
 GO
+
+ALTER TABLE dominio.rol
+ADD borrado BIT NOT NULL DEFAULT 0; --0-> false no borrado, 1 -> true borrado
 
 IF NOT EXISTS (
     SELECT * 
@@ -104,6 +110,8 @@ END
 GO
 
 
+
+
 IF NOT EXISTS (
     SELECT * 
     FROM INFORMATION_SCHEMA.TABLES 
@@ -116,6 +124,9 @@ BEGIN
     );
 END
 GO
+
+ALTER TABLE dominio.grupo_familiar
+ADD borrado BIT NOT NULL DEFAULT 0; --0-> false no borrado, 1 -> true borrado
 
 
 IF NOT EXISTS (
@@ -146,6 +157,9 @@ BEGIN
 END
 GO
 
+ALTER TABLE dominio.socio
+ADD borrado BIT NOT NULL DEFAULT 0; --0-> false no borrado, 1 -> true borrado
+
 
 IF NOT EXISTS (
     SELECT * 
@@ -164,6 +178,9 @@ BEGIN
 END
 GO
 
+ALTER TABLE dominio.actividad
+ADD borrado BIT NOT NULL DEFAULT 0; --0-> false no borrado, 1 -> true borrado
+
 IF NOT EXISTS (
     SELECT * 
     FROM INFORMATION_SCHEMA.TABLES 
@@ -181,6 +198,9 @@ BEGIN
     );
 END
 GO
+
+ALTER TABLE dominio.horario_de_actividad
+ADD borrado BIT NOT NULL DEFAULT 0; --0-> false no borrado, 1 -> true borrado
 
 IF NOT EXISTS (
     SELECT * 
@@ -205,6 +225,9 @@ BEGIN
 END
 GO
 
+ALTER TABLE dominio.factura
+ADD borrado BIT NOT NULL DEFAULT 0; --0-> false no borrado, 1 -> true borrado
+
 IF NOT EXISTS (
     SELECT * 
     FROM INFORMATION_SCHEMA.TABLES 
@@ -222,6 +245,9 @@ BEGIN
 END
 GO
 
+ALTER TABLE dominio.inscripcion_actividad
+ADD borrado BIT NOT NULL DEFAULT 0; --0-> false no borrado, 1 -> true borrado
+
 IF NOT EXISTS (
     SELECT * 
     FROM INFORMATION_SCHEMA.TABLES 
@@ -238,6 +264,10 @@ BEGIN
 	);
 END
 GO
+
+ALTER TABLE dominio.asistencia
+ADD borrado BIT NOT NULL DEFAULT 0; --0-> false no borrado, 1 -> true borrado
+
 
 IF NOT EXISTS (
     SELECT * 
@@ -261,6 +291,10 @@ BEGIN
 END
 GO
 
+
+ALTER TABLE dominio.cuota_membresia
+ADD borrado BIT NOT NULL DEFAULT 0; --0-> false no borrado, 1 -> true borrado
+
 IF NOT EXISTS (
     SELECT * 
     FROM INFORMATION_SCHEMA.TABLES 
@@ -281,6 +315,8 @@ BEGIN
 END
 GO
 
+ALTER TABLE dominio.entrada_pileta
+ADD borrado BIT NOT NULL DEFAULT 0; --0-> false no borrado, 1 -> true borrado
 IF NOT EXISTS (
     SELECT * 
     FROM INFORMATION_SCHEMA.TABLES 
@@ -355,6 +391,10 @@ BEGIN
 END
 GO
 
+ALTER TABLE dominio.pago
+ADD activo BIT NOT NULL DEFAULT 1;
+GO
+
 IF NOT EXISTS (
     SELECT * 
     FROM INFORMATION_SCHEMA.TABLES 
@@ -425,23 +465,23 @@ GO
 */
 CREATE OR ALTER PROCEDURE dominio.alta_usuario
     @nombre_usuario VARCHAR(20),
-    @contrase√±a VARCHAR(20)
+    @contraseÒa VARCHAR(20)
 AS
 BEGIN
 	SET NOCOUNT ON;
 
-    IF LEN(@contrase√±a) < 8 OR 
-       @contrase√±a NOT LIKE '%[0-9]%' OR
-       @contrase√±a NOT LIKE '%[a-zA-Z]%' OR
-       (@contrase√±a NOT LIKE '%!%' AND
-        @contrase√±a NOT LIKE '%@%' AND
-        @contrase√±a NOT LIKE '%#%' AND
-        @contrase√±a NOT LIKE '%$%' AND
-        @contrase√±a NOT LIKE '%^%' AND
-        @contrase√±a NOT LIKE '%&%' AND
-        @contrase√±a NOT LIKE '%*%' AND
-        @contrase√±a NOT LIKE '%(%' AND
-        @contrase√±a NOT LIKE '%)%')
+    IF LEN(@contraseÒa) < 8 OR 
+       @contraseÒa NOT LIKE '%[0-9]%' OR
+       @contraseÒa NOT LIKE '%[a-zA-Z]%' OR
+       (@contraseÒa NOT LIKE '%!%' AND
+        @contraseÒa NOT LIKE '%@%' AND
+        @contraseÒa NOT LIKE '%#%' AND
+        @contraseÒa NOT LIKE '%$%' AND
+        @contraseÒa NOT LIKE '%^%' AND
+        @contraseÒa NOT LIKE '%&%' AND
+        @contraseÒa NOT LIKE '%*%' AND
+        @contraseÒa NOT LIKE '%(%' AND
+        @contraseÒa NOT LIKE '%)%')
     BEGIN
         RAISERROR('La contrase√±a no cumple con los requisitos de seguridad', 16, 1)
         RETURN
@@ -454,14 +494,14 @@ BEGIN
     END
     INSERT INTO dominio.usuario (
         nombre_usuario, 
-        contrase√±a, 
-        fecha_modificacion_contrase√±a, 
-        fecha_expiracion_contrase√±a,
+        contraseÒa, 
+        fecha_modificacion_contraseÒa, 
+        fecha_expiracion_contraseÒa,
         estado_usuario
     )
     VALUES (
         @nombre_usuario, 
-        @contrase√±a, 
+        @contraseÒa, 
         GETDATE(),
         DATEADD(YEAR, 1, GETDATE()),
         'activo'
@@ -473,7 +513,7 @@ GO
 
 
 /**
-	Este SP borra un usuario de manera l√≥gica (cambia estado a 'inactivo')
+	Este SP borra un usuario de manera logica (cambia estado a 'inactivo')
 	@param	ID_usuario indica el ID del usuario a dar de baja
 	@return 0 si √©xito, -1 si error
 */
@@ -522,7 +562,7 @@ GO
 CREATE OR ALTER PROCEDURE dominio.modificar_usuario
     @ID_usuario INT,
     @nuevo_nombre_usuario VARCHAR(20) = NULL,
-    @nueva_contrase√±a VARCHAR(20) = NULL,
+    @nueva_contraseÒa VARCHAR(20) = NULL,
     @nuevo_estado VARCHAR(15) = NULL
 AS
 BEGIN
@@ -540,7 +580,7 @@ BEGIN
             IF EXISTS (SELECT 1 FROM dominio.usuario 
                       WHERE nombre_usuario = @nuevo_nombre_usuario AND ID_usuario <> @ID_usuario)
             BEGIN
-                RAISERROR('El nombre de usuario "%s" ya est√° en uso', 16, 1, @nuevo_nombre_usuario);
+                RAISERROR('El nombre de usuario "%s" ya esta en uso', 16, 1, @nuevo_nombre_usuario);
                 RETURN -1;
             END
             
@@ -549,21 +589,21 @@ BEGIN
             WHERE ID_usuario = @ID_usuario;
         END
 
-        IF @nueva_contrase√±a IS NOT NULL
+        IF @nueva_contraseÒa IS NOT NULL
         BEGIN
-            IF LEN(@nueva_contrase√±a) < 8 OR 
-               @nueva_contrase√±a NOT LIKE '%[0-9]%' OR
-               @nueva_contrase√±a NOT LIKE '%[a-zA-Z]%' OR
-               @nueva_contrase√±a NOT LIKE '%[!@#$%^&*()]%'
+            IF LEN(@nueva_contraseÒa) < 8 OR 
+               @nueva_contraseÒa NOT LIKE '%[0-9]%' OR
+               @nueva_contraseÒa NOT LIKE '%[a-zA-Z]%' OR
+               @nueva_contraseÒa NOT LIKE '%[!@#$%^&*()]%'
             BEGIN
                 RAISERROR('La contrase√±a debe tener al menos 8 caracteres, incluir n√∫meros, letras y un caracter especial (!@#$%^&*)', 16, 1);
                 RETURN -1;
             END
             
             UPDATE dominio.usuario 
-            SET contrase√±a = @nueva_contrase√±a,
-                fecha_modificacion_contrase√±a = GETDATE(),
-                fecha_expiracion_contrase√±a = DATEADD(YEAR, 1, GETDATE())
+            SET contraseÒa = @nueva_contraseÒa,
+                fecha_modificacion_contraseÒa = GETDATE(),
+                fecha_expiracion_contraseÒa = DATEADD(YEAR, 1, GETDATE())
             WHERE ID_usuario = @ID_usuario;
         END
 
@@ -571,7 +611,7 @@ BEGIN
         BEGIN
             IF @nuevo_estado NOT IN ('activo', 'inactivo', 'adeuda')
             BEGIN
-                RAISERROR('Estado inv√°lido. Valores permitidos: "activo", "inactivo" o "adeuda"', 16, 1);
+                RAISERROR('Estado invalido. Valores permitidos: "activo", "inactivo" o "adeuda"', 16, 1);
                 RETURN -1;
             END
             
@@ -581,7 +621,7 @@ BEGIN
         END
 
         IF @nuevo_nombre_usuario IS NULL AND 
-           @nueva_contrase√±a IS NULL AND 
+           @nueva_contraseÒa IS NULL AND 
            @nuevo_estado IS NULL
         BEGIN
             RAISERROR('No se proporcionaron datos para modificar', 16, 1);
@@ -613,7 +653,7 @@ BEGIN
     BEGIN TRY
         IF LEN(TRIM(@nombre_rol)) = 0
         BEGIN
-            RAISERROR('El nombre del rol no puede estar vac√≠o', 16, 1);
+            RAISERROR('El nombre del rol no puede estar vaci≠o', 16, 1);
             RETURN -1;
         END
         
@@ -642,9 +682,9 @@ GO
 
 /*
 	Modifica el nombre de rol en base a un id de rol dado
-	@param ID_rol			id para buscar en la tabla, si no existe, cancela la operaci√≥n
+	@param ID_rol			id para buscar en la tabla, si no existe, cancela la operacion
 	@param nuevo_nombre_rol	indica el nuevo nombre a setear
-	@return 0 √©xito, -1 error
+	@return					0 exito, -1 error
 */
 CREATE OR ALTER PROCEDURE dominio.modificar_rol
     @ID_rol INT,
@@ -662,7 +702,7 @@ BEGIN
 
         IF LEN(TRIM(@nuevo_nombre_rol)) = 0
         BEGIN
-            RAISERROR('El nombre del rol no puede estar vac√≠o', 16, 1);
+            RAISERROR('El nombre del rol no puede estar vacio', 16, 1);
             RETURN -1;
         END
         
@@ -672,7 +712,7 @@ BEGIN
             AND ID_rol <> @ID_rol
         )
         BEGIN
-            RAISERROR('El nombre de rol "%s" ya est√° en uso por otro rol', 16, 1, @nuevo_nombre_rol);
+            RAISERROR('El nombre de rol "%s" ya esta en uso por otro rol', 16, 1, @nuevo_nombre_rol);
             RETURN -1;
         END
 
@@ -693,15 +733,14 @@ GO
 
 /*
 	Consideramos que no es eficiente implementar una baja de rol, es preferible cambiar el nombre de ese rol
-	ya que rol se relaciona con usuario (N:N) generando la tabla rol_usuario, realizar una baja ser√≠a un problema en la l√≥gica de negocios
-	Si tenemos muchos usuarios con el rol adeuda (que indica que tienen deudas y no han pagado), y por alguna raz√≥n le borramos el rol
-	esa persona no queda sin rol o le pone por default activo, concluimos que simplemente es mejor cambiar de nombre el rol por alg√∫n otro.
-	Adem√°s, creemos que no ser√° una operaci√≥n usada con frecuencia, sumando otro motivo para no realizarla.
+	ya que rol se relaciona con usuario (N:N) generando la tabla rol_usuario, realizar una baja seria un problema en la logica de negocios
+	Si tenemos muchos usuarios con el rol adeuda (que indica que tienen deudas y no han pagado), y por alguna razon le borramos el rol
+	esa persona no queda sin rol o le pone por default activo, concluimos que simplemente es mejor cambiar de nombre el rol por algun otro.
+	Ademas, creemos que no sera una operacion usada con frecuencia, sumando otro motivo para no realizarla.
 */
-=======
 --==========================================Crear SP ABM socio==========================================--
 
-CREATE OR ALTER PROCEDURE dominio.sp_alta_socio
+CREATE OR ALTER PROCEDURE dominio.alta_socio
     @ID_usuario INT,
     @nombre VARCHAR(20),
     @apellido VARCHAR(20),
@@ -740,14 +779,14 @@ BEGIN
     --validar DNI
     IF TRY_CAST(@DNI AS INT) IS NULL OR CAST(@DNI AS INT) <= 0 OR CAST(@DNI AS INT) > 99999999
     BEGIN
-        RAISERROR('DNI inv√°lido.', 16, 1);
+        RAISERROR('DNI invalido.', 16, 1);
         RETURN;
     END
 
-    --validar tel√©fono
+    --validar telefono
     IF LEN(@telefono) <> 10
     BEGIN
-        RAISERROR('Tel√©fono debe tener 10 d√≠gitos.', 16, 1);
+        RAISERROR('Telefono debe tener 10 digitos.', 16, 1);
         RETURN;
     END
 
@@ -772,7 +811,7 @@ BEGIN
         END
     END
 
-    -- Si es responsable y no se pas√≥ grupo_fam, creo uno nuevo
+    -- Si es responsable y no se pasa grupo_fam, creo uno nuevo
     IF @es_responsable = 1 AND @id_grupo_familiar IS NULL
     BEGIN
         INSERT INTO dominio.grupo_familiar DEFAULT VALUES;
@@ -850,7 +889,7 @@ BEGIN
     );
 
     PRINT 'Socio registrado exitosamente.';
-END;
+END
 GO
 
 CREATE OR ALTER PROCEDURE dominio.modificar_socio
@@ -989,11 +1028,11 @@ END;
 GO
 
 
-/*tenemos que tener los campos eliminado BIT, fecha_baja DATE para el borrado l√≥gico.
+/*tenemos que tener los campos eliminado BIT, fecha_baja DATE para el borrado logico.
 por otra parte surge la idea de agregar el campo nro_socio UNIQUE que admita NULL,
 de esta manera podemos discriminar de los socios mayores que realizan actividades, de los que solo son responsables.
 Aplicado al siguiente sp, con da la posibilidad de que si un socio mayor y resp del grupo_fam quiere darse de baja, pueda hacerlo
-para quedar solo como responsable. Sino deber√≠amos dar de baja los menores a cargo, o dejarlo activo como socio, debienndo abonar membres√≠a.
+para quedar solo como responsable. Sino deber√≠amos dar de baja los menores a cargo, o dejarlo activo como socio, debienndo abonar membresi≠a.
 
 ALTER TABLE dominio.socio
 ADD 
@@ -1058,7 +1097,7 @@ BEGIN
         RETURN;
     END
 
-    --si no tiene menores a cargo, borrado l√≥gico
+    --si no tiene menores a cargo, borrado logico
     UPDATE dominio.socio
     SET 
         eliminado = 1,
@@ -1134,6 +1173,89 @@ BEGIN
 END;
 GO
 
+<<<<<<< HEAD
+=======
+--=====================================================CUOTA MEMBRESIA=====================================================--
+---------------SP DE CUOTA_MEMBRESIA, FACTURA, DETALLE_FACURA Y PAGO------------------------------------------------
+ALTER TABLE dominio.cuota_membresia
+ADD activo BIT NOT NULL DEFAULT 1; -- 1 = activo, 0 = borrado logico
+GO
+
+CREATE OR ALTER PROCEDURE insertar_cuota_membresia
+    @mes TINYINT,
+    @anio INT,
+    @monto DECIMAL(8,2),
+    @nombre_membresia CHAR(9),
+    @edad_minima INT,
+    @edad_maxima INT,
+    @id_socio INT
+AS
+BEGIN
+	SET NOCOUNT ON
+    -- Validaciones
+    IF @mes < 1 OR @mes > 12
+        BEGIN RAISERROR('Mes invalido.', 16, 1); RETURN; END
+
+    IF @anio < 1900 OR @anio > YEAR(GETDATE()) + 1
+        BEGIN RAISERROR('AÒo invalido.', 16, 1); RETURN; END
+
+    IF @monto <= 0
+        BEGIN RAISERROR('Monto invalido.', 16, 1); RETURN; END
+
+    IF LEN(RTRIM(@nombre_membresia)) = 0
+        BEGIN RAISERROR('Agregar nombre de membresia.', 16, 1); RETURN; END
+
+    IF @edad_minima IS NOT NULL AND @edad_maxima IS NOT NULL AND @edad_minima > @edad_maxima
+        BEGIN RAISERROR('Edad invalida.', 16, 1); RETURN; END
+
+    IF NOT EXISTS (SELECT 1 FROM dominio.socio WHERE ID_socio = @id_socio)
+        BEGIN RAISERROR('El socio no existe.', 16, 1); RETURN; END
+
+    -- Insercion
+    INSERT INTO dominio.cuota_membresia (
+        mes, anio, monto, nombre_membresia, edad_minima, edad_maxima, id_socio
+    ) VALUES (
+        @mes, @anio, @monto, @nombre_membresia, @edad_minima, @edad_maxima, @id_socio
+    );
+END;
+GO
+
+CREATE OR ALTER PROCEDURE eliminar_cuota_membresia -- eliminado logico
+    @ID_cuota INT
+AS
+BEGIN
+	SET NOCOUNT ON
+    IF NOT EXISTS (SELECT 1 FROM dominio.cuota_membresia WHERE ID_cuota = @ID_cuota AND activo = 1)
+        BEGIN RAISERROR('La cuota no existe o ya fue eliminada.', 16, 1); RETURN; END
+
+    UPDATE dominio.cuota_membresia
+    SET activo = 0
+    WHERE ID_cuota = @ID_cuota;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE modificar_cuota_membresia
+    @ID_cuota INT,
+    @mes TINYINT,
+    @anio INT,
+    @monto DECIMAL(8,2),
+    @nombre_membresia CHAR(9),
+    @edad_minima INT,
+    @edad_maxima INT
+AS
+BEGIN
+ IF @edad_minima > @edad_maxima
+    BEGIN
+        RAISERROR('La edad minima no puede ser mayor que la edad maxima.', 16, 1);
+        RETURN;
+    END
+
+    INSERT INTO dominio.actividad (nombre_actividad, costo_mensual, edad_minima, edad_maxima)
+    VALUES (@nombre_actividad, @costo_mensual, @edad_minima, @edad_maxima);
+END;
+GO
+
+>>>>>>> dac6906cd47931c79658551b56437d57a86b72d6
 --======================================================Horario de actividad======================================================-- 
 
 --Insertar horario de actividad
@@ -1356,3 +1478,279 @@ IF NOT EXISTS (SELECT 1 FROM dominio.descuento WHERE ID_descuento = @ID_descuent
     END
     DELETE FROM dominio.descuento
     WHERE ID_descuento = @ID_descuento;
+<<<<<<< HEAD
+=======
+END
+	SET NOCOUNT ON
+    -- Validaciones
+    IF NOT EXISTS (SELECT 1 FROM dominio.cuota_membresia WHERE ID_cuota = @ID_cuota AND activo = 1)
+        BEGIN RAISERROR('La cuota no existe o fue eliminada.', 16, 1); RETURN; END
+
+    IF @mes < 1 OR @mes > 12
+        BEGIN RAISERROR('Mes invalido.', 16, 1); RETURN; END
+
+    IF @anio < 1900 OR @anio > YEAR(GETDATE()) + 1
+        BEGIN RAISERROR('AÒo invalido.', 16, 1); RETURN; END
+
+    IF @monto <= 0
+        BEGIN RAISERROR('El monto debe ser mayor a cero.', 16, 1); RETURN; END
+
+    IF LEN(RTRIM(@nombre_membresia)) = 0
+        BEGIN RAISERROR('Agregar nombre de membresia.', 16, 1); RETURN; END
+
+    IF @edad_minima IS NOT NULL AND @edad_maxima IS NOT NULL AND @edad_minima > @edad_maxima
+        BEGIN RAISERROR('Edad invalida.', 16, 1); RETURN; END
+
+    UPDATE dominio.cuota_membresia
+    SET mes = @mes,
+        anio = @anio,
+        monto = @monto,
+        nombre_membresia = @nombre_membresia,
+        edad_minima = @edad_minima,
+        edad_maxima = @edad_maxima
+    WHERE ID_cuota = @ID_cuota;
+END
+GO
+
+--=====================================================FACTURA=====================================================--
+CREATE OR ALTER PROCEDURE insertar_factura
+    @nro_factura VARCHAR(20),
+    @tipo_factura CHAR(20),
+    @fecha_emision DATETIME,
+    @CAE CHAR(14),
+    @estado CHAR(9),
+    @importe_total DECIMAL(8,2),
+    @razon_social_emisor CHAR(20),
+    @CUIT_emisor INT,
+    @vencimiento_CAE DATETIME,
+    @id_socio INT
+AS
+BEGIN
+	SET NOCOUNT ON
+     -- Validaciones
+    IF @nro_factura IS NULL OR LEN(@nro_factura) = 0
+        BEGIN RAISERROR('El numero de factura es obligatorio.', 16, 1); RETURN; END
+
+    IF LEN(@tipo_factura) = 0 OR LEN(@tipo_factura) > 20
+        BEGIN RAISERROR('Tipo de factura invalida.', 16, 1); RETURN; END
+
+	IF @fecha_emision IS NULL OR @vencimiento_CAE IS NULL OR @vencimiento_CAE < @fecha_emision	
+	BEGIN RAISERROR('Fecha invalida.', 16, 1); RETURN; END
+
+    IF LEN(@CAE) != 14
+        BEGIN RAISERROR('El CAE debe tener 14 caracteres.', 16, 1); RETURN; END
+
+    IF @estado NOT IN ('Pendiente', 'Pagada')
+        BEGIN RAISERROR('Estado debe ser "Pendiente" o "Pagada".', 16, 1); RETURN; END
+
+    IF @importe_total <= 0
+        BEGIN RAISERROR('El importe total invalido.', 16, 1); RETURN; END
+
+	IF @razon_social_emisor IS NULL OR LEN(RTRIM(@razon_social_emisor)) = 0
+        BEGIN RAISERROR('Agregar razÛn social.', 16, 1); RETURN; END
+
+    IF LEN(CAST(@CUIT_emisor AS VARCHAR)) != 11
+        BEGIN RAISERROR('CUIT invalido.', 16, 1); RETURN; END
+
+    IF @vencimiento_CAE < @fecha_emision
+        BEGIN RAISERROR('La fecha de vencimiento CAE invalida.', 16, 1); RETURN; END
+
+    IF NOT EXISTS (SELECT 1 FROM dominio.socio WHERE ID_socio = @id_socio)
+        BEGIN RAISERROR('El socio no existe.', 16, 1); RETURN; END
+
+    -- Insercion
+    INSERT INTO dominio.factura (
+        nro_factura, tipo_factura, fecha_emision, CAE, estado,
+        importe_total, razon_social_emisor, CUIT_emisor, vencimiento_CAE, id_socio
+    )
+    VALUES (
+        @nro_factura, @tipo_factura, @fecha_emision, @CAE, @estado,
+        @importe_total, @razon_social_emisor, @CUIT_emisor, @vencimiento_CAE, @id_socio
+    );
+
+END;
+GO
+
+-- Al ser un documento legal, la factura no se puede modificar ni borrar
+--=====================================================DETALLE FACTURA=====================================================--
+ALTER TABLE dominio.detalle_factura
+ADD activo BIT NOT NULL DEFAULT 1;
+GO
+
+CREATE OR ALTER PROCEDURE dominio.insertar_detalle_factura
+	@descripcion VARCHAR (70),
+	@cantidad INT,
+	@subtotal DECIMAL (10,2),
+	@id_factura INT 
+AS
+BEGIN 
+	SET NOCOUNT ON
+	-- Validaciones
+	IF LEN(RTRIM(@descripcion)) = 0
+        BEGIN RAISERROR('Agregar descripcion.', 16, 1); RETURN; END
+
+    IF @cantidad IS NULL OR @cantidad <= 0
+        BEGIN RAISERROR('Cantidad invalida.', 16, 1); RETURN; END
+
+    IF @subtotal IS NULL OR @subtotal < 0
+        BEGIN RAISERROR('Subtotal invalido.', 16, 1); RETURN; END
+
+    IF NOT EXISTS (SELECT 1 FROM dominio.factura WHERE ID_factura = @id_factura)
+        BEGIN RAISERROR('La factura no existe.', 16, 1); RETURN; END
+
+    -- Insercion
+    INSERT INTO dominio.detalle_factura (
+        descripcion, cantidad, subtotal, id_factura
+    ) VALUES (
+        @descripcion, @cantidad, @subtotal, @id_factura
+    );
+END;
+GO
+
+CREATE OR ALTER PROCEDURE dominio.modificar_detalle_factura
+    @ID_detalle_factura INT,
+    @descripcion VARCHAR(70),
+    @cantidad INT,
+    @subtotal DECIMAL(10,2)
+AS
+BEGIN
+	SET NOCOUNT ON
+    -- Validaciones
+    IF NOT EXISTS (SELECT 1 FROM dominio.detalle_factura WHERE ID_detalle_factura = @ID_detalle_factura)
+        BEGIN RAISERROR('El detalle de factura no existe.', 16, 1); RETURN; END
+
+    IF LEN(RTRIM(@descripcion)) = 0
+        BEGIN RAISERROR('Agregar descipcion.', 16, 1); RETURN; END
+
+    IF @cantidad IS NULL OR @cantidad <= 0
+        BEGIN RAISERROR('Cantidad invalida.', 16, 1); RETURN; END
+
+    IF @subtotal IS NULL OR @subtotal < 0
+        BEGIN RAISERROR('Subtotal invalido.', 16, 1); RETURN; END
+
+    UPDATE dominio.detalle_factura
+    SET descripcion = @descripcion,
+        cantidad = @cantidad,
+        subtotal = @subtotal
+    WHERE ID_detalle_factura = @ID_detalle_factura;
+END;
+GO
+
+CREATE PROCEDURE eliminar_detalle_factura -- eliminado logico
+    @ID_detalle_factura INT
+AS
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM dominio.detalle_factura WHERE ID_detalle_factura = @ID_detalle_factura AND activo = 1)
+    BEGIN
+        RAISERROR('El detalle de factura no existe o ya esta eliminado.', 16, 1);
+        RETURN;
+    END
+
+    UPDATE dominio.detalle_factura
+    SET activo = 0
+    WHERE ID_detalle_factura = @ID_detalle_factura;
+END;
+GO
+
+--=====================================================PAGO=====================================================--
+CREATE OR ALTER PROCEDURE dominio.insertar_pago
+    @fecha_pago DATETIME,
+    @medio_de_pago CHAR(30),
+    @monto DECIMAL(8,2),
+    @estado CHAR(10),
+    @id_factura INT
+AS
+BEGIN
+    -- Validaciones
+    IF NOT EXISTS (SELECT 1 FROM dominio.factura WHERE ID_factura = @id_factura)
+    BEGIN
+        RAISERROR('La factura no existe.', 16, 1);
+        RETURN;
+    END
+
+    IF @monto <= 0
+    BEGIN
+        RAISERROR('Monto invalido.', 16, 1);
+        RETURN;
+    END
+
+	IF RTRIM(@estado) NOT IN ('Pagado', 'No pagado')
+    BEGIN
+        RAISERROR('Estado invalido".', 16, 1);
+        RETURN;
+    END
+
+    IF LEN(RTRIM(@medio_de_pago)) = 0
+    BEGIN
+        RAISERROR('Medio de pago invalido.', 16, 1);
+        RETURN;
+    END
+
+    INSERT INTO dominio.pago (fecha_pago, medio_de_pago, monto, estado, id_factura) 
+		VALUES (@fecha_pago, @medio_de_pago, @monto, @estado, @id_factura);
+END;
+GO
+
+CREATE OR ALTER PROCEDURE dominio.modificar_pago
+    @ID_pago INT,
+    @fecha_pago DATETIME,
+    @medio_de_pago CHAR(30),
+    @monto DECIMAL(8,2),
+    @estado CHAR(10)
+AS
+BEGIN
+	SET NOCOUNT ON
+    IF NOT EXISTS (SELECT 1 FROM dominio.pago WHERE ID_pago = @ID_pago AND activo = 1)
+    BEGIN
+        RAISERROR('El pago no existe o est· eliminado.', 16, 1);
+        RETURN;
+    END
+
+	IF EXISTS (SELECT 1 FROM dominio.pago
+        WHERE ID_pago = @ID_pago AND estado = 'Pagado')
+    BEGIN
+        RAISERROR('No se puede modificar un pago con estado "Pagado".', 16, 1);
+        RETURN;
+	END
+    
+    IF @monto <= 0
+    BEGIN
+        RAISERROR('El monto debe ser mayor a cero.', 16, 1);
+        RETURN;
+    END
+
+    IF LEN(RTRIM(@medio_de_pago)) = 0
+    BEGIN
+        RAISERROR('Medio de pago invalido.', 16, 1);
+        RETURN;
+    END
+
+    UPDATE dominio.pago
+    SET fecha_pago = @fecha_pago,
+        medio_de_pago = @medio_de_pago,
+        monto = @monto,
+        estado = @estado
+    WHERE ID_pago = @ID_pago;
+END
+GO
+
+CREATE OR ALTER PROCEDURE dominio.eliminar_pago
+    @ID_pago INT
+AS
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM dominio.pago WHERE ID_pago = @ID_pago AND activo = 1)
+    BEGIN
+        RAISERROR('El pago no existe o ya est· eliminado.', 16, 1);
+        RETURN;
+    END
+	IF EXISTS (SELECT 1 FROM dominio.pago
+        WHERE ID_pago = @ID_pago AND estado = 'Pagado')
+    BEGIN
+        RAISERROR('No se puede eliminar un pago con estado "Pagado".', 16, 1);
+        RETURN;
+    END
+    UPDATE dominio.pago
+    SET activo = 0
+    WHERE ID_pago = @ID_pago;
+END
+GO

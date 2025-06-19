@@ -1149,9 +1149,9 @@ BEGIN
 			RAISERROR('La actividad especificada no existe.', 16, 1);
 			RETURN;
 		END
-	IF UPPER(@dia) NOT IN ('LUNES','MARTES','MI�RCOLES','JUEVES','VIERNES','S�BADO','DOMINGO')
+	IF UPPER(@dia) NOT IN ('LUNES','MARTES','MIERCOLES','JUEVES','VIERNES','SABADO','DOMINGO')
 		BEGIN
-			RAISERROR('El d�a debe ser un d�a de la semana v�lido.', 16, 1);
+			RAISERROR('El dia debe ser un dia de la semana valido.', 16, 1);
 			RETURN;
 		END
     IF (@hora_inicio > @hora_fin)
@@ -1259,7 +1259,7 @@ AS
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM dominio.actividad WHERE ID_actividad = @id_inscripcion_actividad)
     BEGIN
-        RAISERROR('La inscripci�n a actividad especificada no existe.', 16, 1);
+        RAISERROR('La inscripcion a actividad especificada no existe.', 16, 1);
         RETURN;
     END
     INSERT INTO dominio.asistencia (fecha, asistio, id_inscripcion_actividad)

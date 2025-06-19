@@ -1356,3 +1356,67 @@ IF NOT EXISTS (SELECT 1 FROM dominio.descuento WHERE ID_descuento = @ID_descuent
     END
     DELETE FROM dominio.descuento
     WHERE ID_descuento = @ID_descuento;
+
+--======================================================Deuda======================================================-- 
+/*
+
+IF NOT EXISTS (
+    SELECT * 
+    FROM INFORMATION_SCHEMA.TABLES 
+    WHERE TABLE_NAME = 'deuda' AND TABLE_SCHEMA = 'dominio'
+)
+BEGIN
+	CREATE TABLE dominio.deuda(
+		ID_deuda INT IDENTITY(1,1) PRIMARY KEY,
+		recargo_por_vencimiento DECIMAL (3,2),
+		deuda_acumulada DECIMAL (10,2),
+		fecha_readmision DATE,
+		id_factura INT NOT NULL,
+		id_socio INT NOT NULL,
+		CONSTRAINT FK_id_factura_deuda FOREIGN KEY (id_factura) 
+			REFERENCES dominio.factura(ID_factura),
+		CONSTRAINT FK_id_socio_deuda FOREIGN KEY (id_socio)
+			REFERENCES dominio.socio(ID_socio)
+	);
+END
+GO
+
+*/
+--Insertar deudas
+CREATE OR ALTER PROCEDURE dominio.insertar_deudas
+	@recargo_por_vencimiento DECIMAL(3,2),
+    @deuda_acumulada DECIMAL(10,2),
+    @fecha_readmision DATE = NULL,
+    @id_factura INT,
+    @id_socio INT
+AS
+BEGIN
+    -- Validar que la factura exista
+    IF NOT EXISTS (SELECT 1 FROM dominio.factura WHERE ID_factura = @id_factura)
+    BEGIN
+        RAISERROR('La factura especificada no existe.', 16, 1);
+        RETURN;
+    END
+    
+    -- Validar que el socio exista
+    IF NOT EXISTS (SELECT 1 FROM dominio.socio WHERE ID_socio = @id_socio)
+    BEGIN
+        RAISERROR('El socio especificado no existe.', 16, 1);
+        RETURN;
+    END
+    INSERT INTO dominio.deuda (
+        recargo_por_vencimiento,
+        deuda_acumulada,
+        fecha_readmision,
+        id_factura,
+        id_socio
+    )
+    VALUES (
+        @recargo_por_vencimiento,
+        @deuda_acumulada,
+        @fecha_readmision,
+        @id_factura,
+        @id_socio
+    );
+END
+GO

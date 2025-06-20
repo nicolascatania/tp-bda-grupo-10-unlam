@@ -179,7 +179,7 @@ BEGIN
 		borrado BIT NOT NULL DEFAULT 0,
 		fecha_borrado DATETIME,
 		CONSTRAINT FK_id_socio_inscripcion FOREIGN KEY (id_socio) REFERENCES dominio.socio(ID_socio),
-		CONSTRAINT FK_id_actividad_inscripcion FOREIGN KEY (id_actividad) REFERENCES dominio.actividad(ID_actividad),
+		CONSTRAINT FK_id_actividad_inscripcion FOREIGN KEY (id_actividad) REFERENCES dominio.actividad(ID_actividad)
 	);
 END
 GO
@@ -198,7 +198,7 @@ BEGIN
 		borrado BIT NOT NULL DEFAULT 0,
 		fecha_borrado DATETIME,
 		CONSTRAINT FK_id_inscripcion_actividad FOREIGN KEY (id_inscripcion_actividad) 
-			REFERENCES dominio.actividad(ID_actividad),
+			REFERENCES dominio.inscripcion_actividad(ID_inscripcion)
 	);
 END
 GO
@@ -1468,7 +1468,7 @@ END
 GO
 
 
---=====================================================ReservaSUM=====================================================--
+--=====================================================Entrada pileta=====================================================--
 /**
 	Este sp da de alta una entrada de pileta, las validaciones de campos están hechas con checks en la tabla entrada_pileta a la que se hace referencia
 	Acá solo validamos que el monto para invitado y socio sean indicados uno sí y el otro no, siempre un monto debe ser indicado, unicamente uno de ellos.
@@ -1516,5 +1516,7 @@ END
 GO
 
 /**
-	No tiene sentido que una entrada pueda modificarse o borrarse
+	No tiene sentido que una entrada pueda modificarse 
 **/
+
+--=====================================================Entrada pileta=====================================================--

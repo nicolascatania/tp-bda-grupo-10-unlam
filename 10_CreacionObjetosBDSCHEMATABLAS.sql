@@ -842,10 +842,6 @@ GO
 
 --=====================================================CUOTA MEMBRESIA=====================================================--
 ---------------SP DE CUOTA_MEMBRESIA, FACTURA, DETALLE_FACURA Y PAGO------------------------------------------------
-ALTER TABLE dominio.cuota_membresia
-ADD activo BIT NOT NULL DEFAULT 1; -- 1 = activo, 0 = borrado logico
-GO
-
 CREATE OR ALTER PROCEDURE insertar_cuota_membresia
     @mes TINYINT,
     @anio INT,
@@ -1203,6 +1199,29 @@ BEGIN
 
 END;
 GO
+
+/* ANULACION DE FACTURA, por motivos legales, una factura puede ser anulada para anular su validez, debe hacerse x medio de ARCA (pero queda fuera del alcance del tp), sin embargo, modelamos esto 
+	ya que el sistema debe ser capaz de identificar las facturas que deben ser llevadas a hacer el trámite de anulación, derivando en nota de credito o en simple reembolso*/
+CREATE OR ALTER PROCEDURE dominio.anular_factura @ID_factura INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF NOT EXISTS (
+        SELECT 1 
+        FROM dominio.factura 
+        WHERE ID_factura = @ID_factura
+    )
+    BEGIN
+        RAISERROR('No existe la factura buscada', 16, 1);
+        RETURN;
+    END
+
+    UPDATE dominio.factura
+    SET anulada = 1,
+        fecha_anulacion = GETDATE()
+    WHERE ID_factura = @ID_factura;
+END
 
 -- Al ser un documento legal, la factura no se puede modificar ni borrar
 --=====================================================DETALLE FACTURA=====================================================--

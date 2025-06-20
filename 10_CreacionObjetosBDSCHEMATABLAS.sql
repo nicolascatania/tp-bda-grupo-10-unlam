@@ -158,6 +158,8 @@ BEGIN
 		CUIT_emisor INT, 
 		vencimiento_CAE DATETIME,
 		id_socio INT,
+		anulada BIT NOT NULL DEFAULT 0,
+		fecha_anulacion DATETIME,
 		FOREIGN KEY (id_socio) REFERENCES dominio.socio(ID_socio) 
     );
 END

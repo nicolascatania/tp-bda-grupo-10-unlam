@@ -1144,7 +1144,7 @@ END
 GO
 
 --=====================================================FACTURA=====================================================--
-CREATE OR ALTER PROCEDURE insertar_factura
+CREATE OR ALTER PROCEDURE dominio.insertar_factura
     @nro_factura VARCHAR(20),
     @tipo_factura CHAR(20),
     @fecha_emision DATETIME,

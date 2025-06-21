@@ -158,12 +158,12 @@ BEGIN
 		CUIT_emisor INT, 
 		vencimiento_CAE DATETIME,
 		id_socio INT,
+		anulada BIT NOT NULL DEFAULT 0,
+		fecha_anulacion DATETIME,
 		FOREIGN KEY (id_socio) REFERENCES dominio.socio(ID_socio) 
     );
 END
 GO
-
-
 
 IF NOT EXISTS (
     SELECT * 
@@ -840,10 +840,6 @@ GO
 
 --=====================================================CUOTA MEMBRESIA=====================================================--
 ---------------SP DE CUOTA_MEMBRESIA, FACTURA, DETALLE_FACURA Y PAGO------------------------------------------------
-ALTER TABLE dominio.cuota_membresia
-ADD activo BIT NOT NULL DEFAULT 1; -- 1 = activo, 0 = borrado logico
-GO
-
 CREATE OR ALTER PROCEDURE insertar_cuota_membresia
     @mes TINYINT,
     @anio INT,
@@ -1202,6 +1198,30 @@ BEGIN
 END;
 GO
 
+/* ANULACION DE FACTURA, por motivos legales, una factura puede ser anulada para anular su validez, debe hacerse x medio de ARCA (pero queda fuera del alcance del tp), sin embargo, modelamos esto 
+	ya que el sistema debe ser capaz de identificar las facturas que deben ser llevadas a hacer el trámite de anulación, derivando en nota de credito o en simple reembolso*/
+CREATE OR ALTER PROCEDURE dominio.anular_factura @ID_factura INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF NOT EXISTS (
+        SELECT 1 
+        FROM dominio.factura 
+        WHERE ID_factura = @ID_factura
+    )
+    BEGIN
+        RAISERROR('No existe la factura buscada', 16, 1);
+        RETURN;
+    END
+
+    UPDATE dominio.factura
+    SET anulada = 1,
+        fecha_anulacion = GETDATE()
+    WHERE ID_factura = @ID_factura;
+END
+
+
 -- Al ser un documento legal, la factura no se puede modificar ni borrar
 --=====================================================DETALLE FACTURA=====================================================--
 ALTER TABLE dominio.detalle_factura
@@ -1520,3 +1540,83 @@ GO
 **/
 
 --=====================================================Entrada pileta=====================================================--
+=======
+--=====================================================Reembolso=====================================================--
+/**
+	Da de alta un reembolso 
+	Valida que no haya un reembolso existente para la factura dada, ya que en el DER solo permitimos un reembolso para cada factura
+	Valida que la factura exista y no esté anulada
+	Valida que el monto del reembolso no sobrepase al monto de la factura.
+	Valida que la fecha del reembolso no sea anterior a la fecha de emisión de la factura, tampoco que sea una fecha a futuro (mayor a la de HOY)
+	@motivo_reembolso		motivo del reembolso
+	@monto					monto reembolsado
+	@id_factura				factura a la cuál se asociará el reembolso
+	@fecha_reembolso		fecha de cuando se realiza dicho reembolso
+	@returns				-1 si el reembolso no pudo ser creado, 1 si fue creado exitosamente.
+*/
+CREATE OR ALTER PROCEDURE dominio.alta_reembolso 
+	@motivo_reembolso CHAR(30), 
+	@monto DECIMAL(8,2),
+	@id_factura INT,
+	@fecha_reembolso DATETIME
+AS
+BEGIN
+
+
+	SET NOCOUNT ON;
+
+	IF (@motivo_reembolso IS NULL OR LTRIM(RTRIM(@motivo_reembolso)) = '')
+	BEGIN
+		RAISERROR('El motivo del reembolso no puede ser nulo ni vacío.', 16, 1);
+		RETURN -1;
+	END
+
+
+	DECLARE @fecha_factura DATETIME,
+			@monto_factura DECIMAL(8,2),
+			@anulada BIT;
+
+	SELECT @fecha_factura = factura.fecha_emision,
+		   @monto_factura = factura.importe_total,  
+		   @anulada = factura.anulada
+	FROM dominio.factura
+	WHERE ID_factura = @id_factura;
+
+
+	IF (@fecha_factura IS NULL)
+	BEGIN
+		RAISERROR('ERROR al generar reembolso, no existe factura con ese ID.', 16, 1);
+		RETURN -1;
+	END
+
+	IF EXISTS (SELECT 1 FROM dominio.reembolso 
+				WHERE reembolso.id_factura = @id_factura AND reembolso.borrado = 0)
+	BEGIN
+		RAISERROR('Error al generar reembolso, ya existe un reembolso asociado a esta factura',16,1);
+		RETURN -1;
+	END
+
+	IF (@anulada = 1)
+	BEGIN
+		RAISERROR('Error al generar reembolso, no se pueden hacer reembolsos sobre una factura anulada, la misma no tiene validez!',16,1);
+		RETURN -1;
+	END
+
+	IF (@monto > @monto_factura)
+	BEGIN
+		RAISERROR('Error al generar reembolso, monto del reembolso no puede superar el monto total de la factura.', 16, 1);
+		RETURN -1;
+	END
+
+	IF (@fecha_reembolso < @fecha_factura OR @fecha_reembolso > GETDATE())
+	BEGIN
+		RAISERROR('Error al generar el reembolso, la fecha del reembolso debe estar entre la fecha de emisión de la factura y hoy.', 16, 1);
+		RETURN -1;
+	END
+	
+
+	INSERT INTO dominio.reembolso (motivo_reembolso, monto, id_factura, fecha_reembolso)
+	VALUES (@motivo_reembolso, @monto, @id_factura, @fecha_reembolso);
+	
+	RETURN 1;
+END

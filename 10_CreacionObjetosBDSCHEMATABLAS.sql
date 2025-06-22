@@ -1458,3 +1458,78 @@ GO
 
 --======================================================ACTIVIDAD -tiene- HORARIO DE ACTIVIDAD======================================================-- 
 
+--Tabla 'TIENE':
+IF NOT EXISTS (
+    SELECT * 
+    FROM INFORMATION_SCHEMA.TABLES 
+    WHERE TABLE_NAME = 'tiene' AND TABLE_SCHEMA = 'dominio'
+)
+BEGIN
+    CREATE TABLE dominio.tiene (
+        id_actividad INT NOT NULL,
+        id_horario INT NOT NULL,
+        PRIMARY KEY (id_actividad, id_horario),
+        FOREIGN KEY (id_actividad) REFERENCES dominio.actividad(ID_actividad),
+        FOREIGN KEY (id_horario) REFERENCES dominio.horario_de_actividad(ID_horario)
+    );
+END
+GO
+--SP:
+--Insertar
+CREATE OR ALTER PROCEDURE dominio.asociar_actividad_horario
+    @id_actividad INT,
+    @id_horario INT
+AS
+BEGIN
+    -- Validar que exista la actividad
+    IF NOT EXISTS (SELECT 1 FROM dominio.actividad WHERE ID_actividad = @id_actividad)
+    BEGIN
+        RAISERROR('La actividad especificada no existe.', 16, 1);
+        RETURN;
+    END
+    
+    -- Validar que exista el horario
+    IF NOT EXISTS (SELECT 1 FROM dominio.horario_de_actividad WHERE ID_horario = @id_horario)
+    BEGIN
+        RAISERROR('El horario especificado no existe.', 16, 1);
+        RETURN;
+    END
+    
+    -- Validar que no exista ya la relación
+    IF EXISTS (SELECT 1 FROM dominio.tiene WHERE id_actividad = @id_actividad AND id_horario = @id_horario)
+    BEGIN
+        RAISERROR('Esta actividad ya está asociada con este horario.', 16, 1);
+        RETURN;
+    END
+    
+    -- Crear la relación
+    INSERT INTO dominio.tiene (id_actividad, id_horario)
+    VALUES (@id_actividad, @id_horario);
+    
+END;
+GO
+
+--Eliminar
+CREATE OR ALTER PROCEDURE dominio.EliminarRelacionTiene
+    @id_actividad INT,
+    @id_horario INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- Validar que exista la relación
+    IF NOT EXISTS (
+        SELECT 1 FROM dominio.tiene
+        WHERE id_actividad = @id_actividad AND id_horario = @id_horario
+    )
+    BEGIN
+        RAISERROR('La relación no existe.', 16, 1);
+        RETURN;
+    END
+
+-- Eliminar
+    DELETE FROM dominio.tiene
+    WHERE id_actividad = @id_actividad AND id_horario = @id_horario;
+END
+GO
+

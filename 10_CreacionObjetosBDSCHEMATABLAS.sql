@@ -401,12 +401,118 @@ END
 GO
 
 --=====================================================CREACIONES DE SP PARA ABM DE CADA TABLA=====================================================--
+--==========================================Crear SP ABM grupo_familiar==========================================--
 
+CREATE OR ALTER PROCEDURE dominio.alta_grupo_familiar
+    @cantidad_integrantes INT,
+    @ID_grupo_familiar INT OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    --validacion cantidad_integrantes
+    IF @cantidad_integrantes IS NULL OR @cantidad_integrantes <= 0
+    BEGIN
+        RAISERROR('La cantidad de integrantes debe ser mayor a cero.', 16, 1);
+        RETURN;
+    END
+
+    --insertar grupo familiar
+    INSERT INTO dominio.grupo_familiar (cantidad_integrantes)
+    VALUES (@cantidad_integrantes);
+
+    --obtener el ID grupo familiar insertado
+    SET @ID_grupo_familiar = SCOPE_IDENTITY();
+
+    PRINT 'Grupo familiar creado exitosamente.';
+END;
+GO
+
+CREATE OR ALTER PROCEDURE dominio.modificar_grupo_familiar
+    @ID_grupo_familiar INT,
+    @accion CHAR(4)  -- 'ALTA' o 'BAJA'
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    --validar que el grupo exista y no este borrado
+    IF NOT EXISTS (
+        SELECT 1 FROM dominio.grupo_familiar
+        WHERE ID_grupo_familiar = @ID_grupo_familiar AND borrado = 0
+    )
+    BEGIN
+        RAISERROR('El grupo familiar no existe o está dado de baja.', 16, 1);
+        RETURN;
+    END
+
+    --obtener cantidad_integrantes actual
+    DECLARE @actual INT;
+    SELECT @actual = cantidad_integrantes
+    FROM dominio.grupo_familiar
+    WHERE ID_grupo_familiar = @ID_grupo_familiar;
+
+    --necesario ya que con CHAR se completa con espacios a derecha
+    DECLARE @accion_normalizada CHAR(4) = UPPER(RTRIM(@accion));
+
+    IF @accion_normalizada = 'ALTA'
+    BEGIN
+        UPDATE dominio.grupo_familiar
+        SET cantidad_integrantes = cantidad_integrantes + 1
+        WHERE ID_grupo_familiar = @ID_grupo_familiar;
+    END
+    ELSE IF @accion_normalizada = 'BAJA'
+    BEGIN
+        IF @actual <= 0
+        BEGIN
+            RAISERROR('No se puede reducir la cantidad de integrantes por debajo de cero.', 16, 1);
+            RETURN;
+        END
+
+        UPDATE dominio.grupo_familiar
+        SET cantidad_integrantes = cantidad_integrantes - 1
+        WHERE ID_grupo_familiar = @ID_grupo_familiar;
+    END
+    ELSE
+    BEGIN
+        RAISERROR('La acción debe ser ''ALTA'' o ''BAJA''.', 16, 1);
+        RETURN;
+    END
+
+    PRINT 'Cantidad de integrantes actualizada correctamente.';
+END;
+GO
+
+CREATE OR ALTER PROCEDURE dominio.baja_grupo_familiar
+	@ID_grupo_familiar INT
+AS
+BEGIN
+	SET NOCOUNT ON;
+
+	--validar que el grupo familiar exista y no esté borrado
+    IF NOT EXISTS (
+        SELECT 1
+        FROM dominio.grupo_familiar
+        WHERE ID_grupo_familiar = @ID_grupo_familiar AND borrado = 0
+    )
+    BEGIN
+        RAISERROR('El grupo familiar no existe o está dado de baja.', 16, 1);
+        RETURN;
+    END
+
+	UPDATE dominio.grupo_familiar
+	SET
+		borrado = 1,
+		fecha_borrado = GETDATE()
+		WHERE ID_grupo_familiar = @ID_grupo_familiar;
+
+		PRINT('El grupo familiar se dio de baja exitosamente.');
+
+END;
+GO
 
 --==========================================Crear SP ABM socio==========================================--
 
 CREATE OR ALTER PROCEDURE dominio.alta_socio
-    @ID_usuario INT,
     @nombre VARCHAR(20),
     @apellido VARCHAR(20),
     @fecha_nacimiento DATE,
@@ -417,19 +523,26 @@ CREATE OR ALTER PROCEDURE dominio.alta_socio
     @nro_obra_social VARCHAR(30),
     @email VARCHAR(30),
     @id_grupo_familiar INT = NULL,
-    @id_responsable_a_cargo INT = NULL
+    @id_responsable_a_cargo INT = NULL,
+	@DNI_responsable INT = NULL,
+	@email_responsable VARCHAR(30) = NULL,
+	@nombre_responsable VARCHAR(20) = NULL,
+	@apellido_responsable VARCHAR(20) = NULL,
+	@fecha_nacimiento_responsable DATE = NULL,
+	@telefono_responsable CHAR(10) = NULL,
+	@parentezco_con_responsable CHAR(15) = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    --validar si existe usuario
-    IF NOT EXISTS (SELECT 1 FROM dominio.usuario WHERE ID_usuario = @ID_usuario)
+    --validar si socio ya se encuentra registrado
+    IF NOT EXISTS (SELECT 1 FROM dominio.socio WHERE DNI = @DNI AND borrado = 0)
     BEGIN
-        RAISERROR('El usuario especificado no existe.', 16, 1);
+        RAISERROR('El socio ya se encuentra registrado.', 16, 1);
         RETURN;
     END
 
-    --calcular edad y asigno categorÃ­a
+    --calcular edad y asigno categori­a
     DECLARE @edad INT = DATEDIFF(YEAR, @fecha_nacimiento, GETDATE());
     DECLARE @categoria CHAR(10);
     IF @edad < 13
@@ -476,37 +589,50 @@ BEGIN
         END
     END
 
-    -- Si es responsable y no se pasa grupo_fam, creo uno nuevo
-    IF @es_responsable = 1 AND @id_grupo_familiar IS NULL
+    --si es responsable y no se pasa grupo_fam, creo uno nuevo
+	IF @es_responsable = 1
+	BEGIN
+		IF @id_grupo_familiar IS NULL
+		BEGIN
+			DECLARE @nuevo_grupo INT;
+			EXEC dominio.alta_grupo_familiar @cantidad_integrantes = 1, @ID_grupo_familiar = @nuevo_grupo OUTPUT;
+			SET @id_grupo_familiar = @nuevo_grupo;
+			PRINT 'Nuevo grupo creado con ID: ' + CAST(@nuevo_grupo AS VARCHAR);
+		END
+		ELSE
+		BEGIN
+			--sino valido que no haya responsable
+			IF EXISTS (
+				SELECT 1 FROM dominio.socio
+				WHERE id_grupo_familiar = @id_grupo_familiar AND es_responsable = 1
+			)
+			BEGIN
+				RAISERROR('Ya existe un responsable en este grupo familiar.', 16, 1);
+				RETURN;
+			END
+		END
+	END
+	--si quiero dar de alta un menor, debe existir grupo familiar antes. Debo reg. primero al socio o tutor responsable.
+    IF @edad < 18
     BEGIN
-        INSERT INTO dominio.grupo_familiar DEFAULT VALUES;
-        SET @id_grupo_familiar = SCOPE_IDENTITY();
-    END
-
-    --validar si existe grupo familiar y si existe, que no tenga responsable ya asignado
-    IF @es_responsable = 1 AND @id_grupo_familiar IS NOT NULL
-    BEGIN
-        IF EXISTS (
-            SELECT 1 FROM dominio.socio
-            WHERE id_grupo_familiar = @id_grupo_familiar AND es_responsable = 1
-        )
+        IF @id_responsable_a_cargo IS NULL
         BEGIN
-            RAISERROR('Ya existe un responsable en este grupo familiar.', 16, 1);
+            RAISERROR('El socio menor debe estar vinculado a un responsable.', 16, 1);
             RETURN;
         END
-    END
-	--si quiero dar de alta un menor, debe existir grupo familiar antes. Debo reg. primero al socio o tutor responsable.
-    IF @es_responsable = 0
-    BEGIN
+
+        --si no se paso grupo, pero tiene responsable, obtener el grupo del responsable
         IF @id_grupo_familiar IS NULL
         BEGIN
-            RAISERROR('Un socio menor debe estar vinculado a un grupo familiar.', 16, 1);
-            RETURN;
-        END
-        IF NOT EXISTS (SELECT 1 FROM dominio.grupo_familiar WHERE id_grupo_familiar = @id_grupo_familiar)
-        BEGIN
-            RAISERROR('El grupo familiar indicado no existe.', 16, 1);
-            RETURN;
+            SELECT @id_grupo_familiar = id_grupo_familiar
+            FROM dominio.socio
+            WHERE ID_socio = @id_responsable_a_cargo;
+
+            IF @id_grupo_familiar IS NULL
+            BEGIN
+                RAISERROR('El responsable no tiene grupo familiar asignado.', 16, 1);
+                RETURN;
+            END
         END
     END
 
@@ -522,39 +648,32 @@ BEGIN
         END
     END
 
-    --verificar si el usuario tiene rol Tutor
-    DECLARE @es_tutor BIT = 0;
-    IF EXISTS (
-        SELECT 1
-        FROM dominio.rol_usuario ru
-        INNER JOIN dominio.rol r ON ru.ID_rol = r.ID_rol
-        WHERE ru.ID_usuario = @ID_usuario AND r.nombre_rol = 'Tutor'
-    )
-        SET @es_tutor = 1;
-
-    --asignar nro_socio solo si NO es tutor
-    DECLARE @nro_socio INT = NULL;
-    IF @es_tutor = 0
-    BEGIN
-        SELECT @nro_socio = ISNULL(MAX(nro_socio), 0) + 1 FROM dominio.socio WHERE nro_socio IS NOT NULL;
-    END
-
     --registrar alta socio
     INSERT INTO dominio.socio (
         nombre, apellido, fecha_nacimiento, DNI,
         telefono, telefono_de_emergencia, obra_social, nro_obra_social,
         email, id_grupo_familiar, id_responsable_a_cargo,
-        categoria_socio, es_responsable, nro_socio
+        categoria_socio, es_responsable,
+        DNI_responsable, email_responsable, nombre_responsable, apellido_responsable,
+        fecha_nacimiento_responsable, telefono_responsable, parentezco_con_responsable
     )
     VALUES (
         @nombre, @apellido, @fecha_nacimiento, @DNI,
         @telefono, @telefono_de_emergencia, @obra_social, @nro_obra_social,
         @email, @id_grupo_familiar, @id_responsable_a_cargo,
-        @categoria, @es_responsable, @nro_socio
+        @categoria, @es_responsable,
+        @DNI_responsable, @email_responsable, @nombre_responsable, @apellido_responsable,
+        @fecha_nacimiento_responsable, @telefono_responsable, @parentezco_con_responsable
     );
 
+    --si el grupo ya existe, incremento cantidad_integrantes
+    IF @id_grupo_familiar IS NOT NULL
+    BEGIN
+        EXEC dominio.modificar_grupo_familiar @ID_grupo_familiar = @id_grupo_familiar, @accion = 'ALTA';
+    END
+
     PRINT 'Socio registrado exitosamente.';
-END
+END;
 GO
 
 CREATE OR ALTER PROCEDURE dominio.modificar_socio
@@ -570,15 +689,39 @@ CREATE OR ALTER PROCEDURE dominio.modificar_socio
     @nro_obra_social VARCHAR(30),
     @email VARCHAR(30),
     @id_grupo_familiar INT = NULL,
-    @id_responsable_a_cargo INT = NULL
+    @id_responsable_a_cargo INT = NULL,
+	@DNI_responsable INT = NULL,
+    @email_responsable VARCHAR(30) = NULL,
+    @nombre_responsable VARCHAR(20) = NULL,
+    @apellido_responsable VARCHAR(20) = NULL,
+    @fecha_nacimiento_responsable DATE = NULL,
+    @telefono_responsable CHAR(10) = NULL,
+    @parentezco_con_responsable CHAR(15) = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
 
     --validar existencia del socio
-    IF NOT EXISTS (SELECT 1 FROM dominio.socio WHERE ID_socio = @ID_socio)
+    IF NOT EXISTS (SELECT 1 FROM dominio.socio WHERE ID_socio = @ID_socio AND borrado = 0)
     BEGIN
         RAISERROR('El socio a modificar no existe.', 16, 1);
+        RETURN;
+    END
+
+	--validar DNI duplicado
+    IF EXISTS (
+        SELECT 1 FROM dominio.socio
+        WHERE DNI = @DNI AND ID_socio <> @ID_socio AND borrado = 0
+    )
+    BEGIN
+        RAISERROR('El DNI ya está registrado a otro socio.', 16, 1);
+        RETURN;
+    END
+
+	--validar telefono
+	IF LEN(@telefono) <> 10
+    BEGIN
+        RAISERROR('Teléfono debe tener 10 dígitos.', 16, 1);
         RETURN;
     END
 
@@ -594,16 +737,16 @@ BEGIN
 
     DECLARE @es_responsable BIT = CASE WHEN @edad >= 18 THEN 1 ELSE 0 END;
 
-    --validar que no se asigne como su propio responsable
-    IF @id_responsable_a_cargo = @ID_socio
-    BEGIN
-        RAISERROR('Un socio no puede ser su propio responsable.', 16, 1);
-        RETURN;
-    END
-
     --validar responsable a cargo
     IF @id_responsable_a_cargo IS NOT NULL
     BEGIN
+		--que no se asigne como su propio responsable
+		IF @id_responsable_a_cargo = @ID_socio
+		BEGIN
+			RAISERROR('Un socio no puede ser su propio responsable.', 16, 1);
+			RETURN;
+		END
+		--existencia y edad
         DECLARE @edad_responsable INT;
         SELECT @edad_responsable = DATEDIFF(YEAR, fecha_nacimiento, GETDATE())
         FROM dominio.socio
@@ -648,30 +791,30 @@ BEGIN
         END
     END
 
-    --verificar si tiene rol "Tutor"
-    DECLARE @es_tutor BIT = 0;
-    IF EXISTS (
-        SELECT 1
-        FROM dominio.rol_usuario ru
-        INNER JOIN dominio.rol r ON ru.ID_rol = r.ID_rol
-        WHERE ru.ID_usuario = @ID_usuario AND r.nombre_rol = 'Tutor'
-    )
-        SET @es_tutor = 1;
+	DECLARE @grupo_anterior INT;
+	SELECT @grupo_anterior = id_grupo_familiar FROM dominio.socio WHERE ID_socio = @ID_socio;
 
-    --obtener nro_socio actual
-    DECLARE @nro_socio_actual INT;
-    SELECT @nro_socio_actual = nro_socio FROM dominio.socio WHERE ID_socio = @ID_socio;
+	--realizo la baja
+	IF @id_grupo_familiar IS NOT NULL AND @grupo_anterior IS NOT NULL AND @id_grupo_familiar <> @grupo_anterior
+	BEGIN
+		EXEC dominio.modificar_grupo_familiar @ID_grupo_familiar = @grupo_anterior, @accion = 'BAJA';
+		--si quedo vacio, dar de baja el grupo
+        DECLARE @integrantes_restantes INT;
+        SELECT @integrantes_restantes = cantidad_integrantes
+        FROM dominio.grupo_familiar
+        WHERE ID_grupo_familiar = @grupo_anterior;
 
-    --si no es tutor y no tiene nro_socio, asignar uno nuevo
-    DECLARE @nuevo_nro_socio INT = @nro_socio_actual;
-    IF @es_tutor = 0 AND @nro_socio_actual IS NULL
-    BEGIN
-        SELECT @nuevo_nro_socio = ISNULL(MAX(nro_socio), 0) + 1 FROM dominio.socio WHERE nro_socio IS NOT NULL;
-    END
+        IF @integrantes_restantes = 0
+        BEGIN
+            EXEC dominio.baja_grupo_familiar @ID_grupo_familiar = @grupo_anterior;
+        END
+		--alta en nuevo grupo
+		EXEC dominio.modificar_grupo_familiar @ID_grupo_familiar = @id_grupo_familiar, @accion = 'ALTA';
+	END
 
     --actualizar socio
     UPDATE dominio.socio
-    SET 
+    SET
         nombre = @nombre,
         apellido = @apellido,
         fecha_nacimiento = @fecha_nacimiento,
@@ -685,95 +828,107 @@ BEGIN
         id_responsable_a_cargo = @id_responsable_a_cargo,
         categoria_socio = @categoria,
         es_responsable = @es_responsable,
-        nro_socio = @nuevo_nro_socio
+        DNI_responsable = @DNI_responsable,
+        email_responsable = @email_responsable,
+        nombre_responsable = @nombre_responsable,
+        apellido_responsable = @apellido_responsable,
+        fecha_nacimiento_responsable = @fecha_nacimiento_responsable,
+        telefono_responsable = @telefono_responsable,
+        parentezco_con_responsable = @parentezco_con_responsable
     WHERE ID_socio = @ID_socio;
 
     PRINT 'Socio actualizado correctamente.';
 END;
 GO
 
-
-/*tenemos que tener los campos eliminado BIT, fecha_baja DATE para el borrado logico.
-por otra parte surge la idea de agregar el campo nro_socio UNIQUE que admita NULL,
-de esta manera podemos discriminar de los socios mayores que realizan actividades, de los que solo son responsables.
-Aplicado al siguiente sp, con da la posibilidad de que si un socio mayor y resp del grupo_fam quiere darse de baja, pueda hacerlo
-para quedar solo como responsable. Sino deberÃ­amos dar de baja los menores a cargo, o dejarlo activo como socio, debienndo abonar membresi­a.
-
-ALTER TABLE dominio.socio
-ADD 
-    eliminado BIT NOT NULL DEFAULT 0 WITH VALUES,
-    fecha_baja DATE NULL,
-    nro_socio INT NULL UNIQUE,
-    CONSTRAINT CK_nro_socio_mayor_a_cero CHECK (
-        nro_socio IS NULL OR nro_socio > 0
-    );
-GO
-Modificar creaciÃ³n de tabla SOCIO para mantener coherencia desde la creaciÃ³n de objetos.
-
-*/
-
-CREATE OR ALTER PROCEDURE dominio.sp_baja_socio
-    @ID_socio INT,
-    @usuario_baja NVARCHAR(50)
+CREATE OR ALTER PROCEDURE dominio.baja_socio
+    @ID_socio INT
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    --validar que el socio exista y no estÃ© dado de baja
+    --validar que el socio exista y no este dado de baja
     IF NOT EXISTS (
-        SELECT 1 FROM dominio.socio WHERE ID_socio = @ID_socio AND eliminado = 0
+        SELECT 1 
+        FROM dominio.socio 
+        WHERE ID_socio = @ID_socio AND borrado = 0
     )
     BEGIN
         RAISERROR('El socio no existe o ya fue dado de baja.', 16, 1);
         RETURN;
     END
 
+    --obtener grupo familiar actual
+    DECLARE @grupo INT;
+    SELECT @grupo = id_grupo_familiar
+    FROM dominio.socio
+    WHERE ID_socio = @ID_socio;
+
     --verificar si tiene menores a cargo
     IF EXISTS (
         SELECT 1
         FROM dominio.socio
-        WHERE id_responsable_a_cargo = @ID_socio AND eliminado = 0 AND DATEDIFF(YEAR, fecha_nacimiento, GETDATE()) < 18
+        WHERE id_responsable_a_cargo = @ID_socio 
+          AND borrado = 0 
+          AND categoria_socio IN ('Menor','Cadete')
     )
     BEGIN
-        PRINT 'El socio tiene menores a cargo. SerÃ¡ convertido en Tutor.';
+        --buscar otro socio mayor en el grupo
+        DECLARE @nuevo_responsable INT;
 
-        --si teiene menor a cargo deja de ser socio activo y se cambia a rol tutor
-        UPDATE dominio.socio
-        SET 
-            nro_socio = NULL,
-            eliminado = 0,
-            fecha_baja = GETDATE()
-        WHERE ID_socio = @ID_socio;
+        SELECT TOP 1 @nuevo_responsable = ID_socio
+        FROM dominio.socio
+        WHERE id_grupo_familiar = @grupo
+          AND ID_socio <> @ID_socio
+          AND borrado = 0
+          AND categoria_socio = 'Mayor'
+        ORDER BY fecha_nacimiento; --puede ser por criterio alfabético también
 
-        --asignar rol Tutor
-        DECLARE @id_rol_tutor INT;
-        SELECT @id_rol_tutor = ID_rol FROM dominio.rol WHERE nombre_rol = 'Tutor';
-
-        IF NOT EXISTS (
-            SELECT 1 FROM dominio.rol_usuario 
-            WHERE ID_usuario = @ID_usuario AND ID_rol = @id_rol_tutor
-        )
+        IF @nuevo_responsable IS NULL
         BEGIN
-            INSERT INTO dominio.rol_usuario (ID_usuario, ID_rol)
-            VALUES (@ID_usuario, @id_rol_tutor);
+            RAISERROR('No se puede dar de baja al socio porque tiene menores a cargo y es el único mayor del grupo familiar.', 16, 1);
+            RETURN;
         END
 
-        PRINT 'El socio fue dado de baja como activo y ahora es tutor.';
-        RETURN;
+        --transfiero responsabilidad de los menores al nuevo socio mayor
+        UPDATE dominio.socio
+        SET id_responsable_a_cargo = @nuevo_responsable
+        WHERE id_responsable_a_cargo = @ID_socio
+          AND borrado = 0
+          AND categoria_socio IN ('Menor','Cadete');
+
+        --asegurar que el nuevo responsable tenga su campo "responsable" en 1
+        UPDATE dominio.socio
+        SET es_responsable = 1
+        WHERE ID_socio = @nuevo_responsable;
     END
 
-    --si no tiene menores a cargo, borrado logico
+    --baja logica del socio
     UPDATE dominio.socio
-    SET 
-        eliminado = 1,
-        fecha_baja = GETDATE(),
-        nro_socio = NULL
+    SET borrado = 1,
+        fecha_borrado = GETDATE()
     WHERE ID_socio = @ID_socio;
+
+    --si pertenece a un grupo, actualizar cantidad_integrantes
+    IF @grupo IS NOT NULL
+    BEGIN
+        EXEC dominio.modificar_grupo_familiar @ID_grupo_familiar = @grupo, @accion = 'BAJA';
+
+        --verificar si quedo vacio
+        DECLARE @restantes INT;
+        SELECT @restantes = cantidad_integrantes
+        FROM dominio.grupo_familiar
+        WHERE ID_grupo_familiar = @grupo;
+
+        IF @restantes = 0
+        BEGIN
+            EXEC dominio.baja_grupo_familiar @ID_grupo_familiar = @grupo;
+        END
+    END
 
     PRINT 'Socio dado de baja exitosamente.';
 END;
 GO
-
 --======================================================ACTIVIDAD======================================================-- 
 --Insertar actividad
 CREATE OR ALTER PROCEDURE dominio.insertar_actividad

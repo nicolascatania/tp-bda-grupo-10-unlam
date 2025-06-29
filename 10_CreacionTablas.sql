@@ -67,7 +67,7 @@ IF NOT EXISTS (
 BEGIN
     CREATE TABLE solNorte.actividad (
         ID_actividad INT IDENTITY(1,1) PRIMARY KEY,
-        nombre_actividad CHAR(15) NOT NULL,
+        nombre_actividad CHAR(15) NOT NULL CHECK(nombre_actividad IN ('FUTSAL', 'VOLEY', 'TAEKWONDO', 'BAILEARTISTICO', 'NATACION', 'AJEDREZ')), --al momento de hacer una importacion, pasar todo a uppercase, ignorar tildes y cortar espacios en blanco
 		costo_mensual DECIMAL(8,2) NOT NULL CHECK(costo_mensual > 0),
 		edad_minima INT CHECK(edad_minima > 0),
 		edad_maxima INT CHECK(edad_maxima > 0),

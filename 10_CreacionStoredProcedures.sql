@@ -605,7 +605,7 @@ END;
 GO
 
 --=====================================================CUOTA MEMBRESIA=====================================================--
-CREATE OR ALTER PROCEDURE insertar_cuota_membresia
+CREATE OR ALTER PROCEDURE solNorte.insertar_cuota_membresia
     @mes TINYINT,
     @anio INT,
     @monto DECIMAL(8,2),
@@ -644,7 +644,7 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE eliminar_cuota_membresia -- eliminado logico
+CREATE OR ALTER PROCEDURE solNorte.eliminar_cuota_membresia -- eliminado logico
     @ID_cuota INT
 AS
 BEGIN

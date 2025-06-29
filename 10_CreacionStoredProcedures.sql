@@ -259,7 +259,7 @@ BEGIN
         telefono, telefono_de_emergencia, obra_social, nro_obra_social,
         email, id_grupo_familiar, id_responsable_a_cargo,
         categoria_socio, es_responsable,
-        DNI_responsable, email_responsable, nombre_responsable, apellido_responsable,
+        DNI_responsable, mail_responsable, nombre_responsable, apellido_responsable,
         fecha_nacimiento_responsable, telefono_responsable, parentezco_con_responsable
     )
     VALUES (
@@ -436,7 +436,7 @@ BEGIN
         categoria_socio = @categoria,
         es_responsable = @es_responsable,
         DNI_responsable = @DNI_responsable,
-        email_responsable = @email_responsable,
+        mail_responsable = @email_responsable,
         nombre_responsable = @nombre_responsable,
         apellido_responsable = @apellido_responsable,
         fecha_nacimiento_responsable = @fecha_nacimiento_responsable,
@@ -535,7 +535,7 @@ BEGIN
 
 	--busco el DNI para lograr un print con información útil
 	Declare @DNI_socio INT;
-	SET @DNI_socio = SELECT DNI FROM solNorte.socio WHERE @ID_socio = ID_socio;
+	SET @DNI_socio = (SELECT DNI FROM solNorte.socio WHERE ID_socio = @ID_socio);
 
     PRINT FORMATMESSAGE('Socio (DNI: %d) dado de baja exitosamente. ID: %d', @DNI_socio, @ID_socio);
 END;

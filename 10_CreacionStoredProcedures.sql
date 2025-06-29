@@ -833,21 +833,39 @@ GO
 --======================================================Asistencia======================================================-- 
 
 --Inserta un registro de asistencia 
-CREATE PROCEDURE solNorte.insertar_asistencia
+CREATE OR ALTER PROCEDURE solNorte.insertar_asistencia
     @fecha DATE,
     @asistio BIT,
     @id_inscripcion_actividad INT = NULL
 AS
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM solNorte.actividad WHERE ID_actividad = @id_inscripcion_actividad)
+    SET NOCOUNT ON;
+
+    IF NOT EXISTS (
+        SELECT 1 
+        FROM solNorte.inscripcion_actividad 
+        WHERE ID_inscripcion = @id_inscripcion_actividad
+    )
     BEGIN
-        RAISERROR('La inscripcion a actividad especificada no existe.', 16, 1);
+        RAISERROR('La inscripción a actividad especificada no existe.', 16, 1);
         RETURN;
     END
+
+    -- Validar que la fecha no sea futura
+    IF @fecha > CAST(GETDATE() AS DATE)
+    BEGIN
+        RAISERROR('No se puede registrar una asistencia con fecha futura.', 16, 1);
+        RETURN;
+    END
+
+    -- Insertar la asistencia
     INSERT INTO solNorte.asistencia (fecha, asistio, id_inscripcion_actividad)
     VALUES (@fecha, @asistio, @id_inscripcion_actividad);
+
+    PRINT 'Asistencia registrada correctamente.';
 END;
 GO
+
 
 -- Modifica un registro de asistencia
 CREATE OR ALTER PROCEDURE solNorte.modificar_asistencia
@@ -1440,3 +1458,5 @@ BEGIN
 	
 	RETURN 1;
 END
+
+--=====================================================DEUDA=====================================================--

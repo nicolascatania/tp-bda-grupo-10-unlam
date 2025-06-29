@@ -605,7 +605,6 @@ END;
 GO
 
 --=====================================================CUOTA MEMBRESIA=====================================================--
----------------SP DE CUOTA_MEMBRESIA, FACTURA, DETALLE_FACURA Y PAGO------------------------------------------------
 CREATE OR ALTER PROCEDURE insertar_cuota_membresia
     @mes TINYINT,
     @anio INT,
@@ -659,25 +658,41 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE modificar_cuota_membresia
+
+-- Este sp permite modificar alguno de los campos (excepto el id)  en caso de algun error en la emisión de la cuota
+-- Con COALESCE evitamos que se sobreescriban los valores existentes en caso de no indicar el valor por parámetros
+-- Ejemplo, si solo indico un nuevo monto y el resto de parametros no, solo se modificara el monto, el resto sigue igual como está sin cambios
+CREATE OR ALTER PROCEDURE solNorte.modificar_cuota_membresia
     @ID_cuota INT,
-    @mes TINYINT,
-    @anio INT,
-    @monto DECIMAL(8,2),
-    @nombre_membresia CHAR(9),
-    @edad_minima INT,
-    @edad_maxima INT
+    @monto DECIMAL(8,2) = NULL,
+    @nombre_membresia CHAR(9) = NULL,
+    @edad_minima INT = NULL,
+    @edad_maxima INT = NULL
 AS
 BEGIN
- IF @edad_minima > @edad_maxima
+    SET NOCOUNT ON;
+
+    IF NOT EXISTS (
+        SELECT 1 
+        FROM solNorte.cuota_membresia 
+        WHERE ID_cuota = @ID_cuota
+    )
     BEGIN
-        RAISERROR('La edad minima no puede ser mayor que la edad maxima.', 16, 1);
+        RAISERROR('No existe la cuota con ID %d', 16, 1, @ID_cuota);
         RETURN;
     END
 
-    INSERT INTO solNorte.actividad (nombre_actividad, costo_mensual, edad_minima, edad_maxima)
-    VALUES (@nombre_membresia, @costo_mensual, @edad_minima, @edad_maxima);
+    UPDATE solNorte.cuota_membresia
+    SET
+        monto = COALESCE(@monto, monto),
+        nombre_membresia = COALESCE(@nombre_membresia, nombre_membresia),
+        edad_minima = COALESCE(@edad_minima, edad_minima),
+        edad_maxima = COALESCE(@edad_maxima, edad_maxima)
+    WHERE ID_cuota = @ID_cuota;
+
+    PRINT FORMATMESSAGE('Cuota ID %d modificada correctamente.', @ID_cuota);
 END;
+;
 GO
 
 --======================================================Horario de actividad======================================================-- 

@@ -805,7 +805,7 @@ BEGIN
     -- Validar que exista la inscripción
     IF NOT EXISTS (SELECT 1 FROM solNorte.inscripcion_actividad WHERE ID_inscripcion = @ID_inscripcion)
     BEGIN
-        RAISERROR('La inscripción especificada no existe.', 16, 1);
+        RAISERROR('La inscripcion especificada no existe. ID: %d', 16, 1, @ID_inscripcion);
         RETURN;
     END;
 
@@ -816,7 +816,7 @@ BEGIN
         id_socio = COALESCE(@id_socio, id_socio)
     WHERE ID_inscripcion = @ID_inscripcion;
 
-    PRINT FORMATMESSAGE('Inscripción ID %d modificada correctamente.', @ID_inscripcion);
+    PRINT FORMATMESSAGE('Inscripcion ID %d modificada correctamente.', @ID_inscripcion);
 END;
 GO
 
@@ -850,26 +850,32 @@ END;
 GO
 
 -- Modifica un registro de asistencia
-CREATE PROCEDURE solNorte.modificar_asistencia
+CREATE OR ALTER PROCEDURE solNorte.modificar_asistencia
     @ID_asistencia INT,
-    @fecha DATE,
-    @asistio BIT,
-    @id_inscripcion_actividad INT
+    @fecha DATE = NULL,
+    @asistio BIT = NULL,
+    @id_inscripcion_actividad INT = NULL
 AS
 BEGIN
+    SET NOCOUNT ON;
+
+    -- Validar existencia del registro
     IF NOT EXISTS (SELECT 1 FROM solNorte.asistencia WHERE ID_asistencia = @ID_asistencia)
     BEGIN
         RAISERROR('El registro de asistencia especificado no existe.', 16, 1);
         RETURN;
-    END
+    END;
+
+    -- Actualizar solo los campos provistos
     UPDATE solNorte.asistencia
-    SET fecha = @fecha,
-        asistio = @asistio,
-        id_inscripcion_actividad = @id_inscripcion_actividad
+    SET fecha = COALESCE(@fecha, fecha),
+        asistio = COALESCE(@asistio, asistio),
+        id_inscripcion_actividad = COALESCE(@id_inscripcion_actividad, id_inscripcion_actividad)
     WHERE ID_asistencia = @ID_asistencia;
+
+    PRINT FORMATMESSAGE('Asistencia ID %d modificada correctamente.', @ID_asistencia);
 END;
 GO
-
 
 --Borrar un registro de asistencia 
 CREATE PROCEDURE solNorte.borrar_asistencia
@@ -913,19 +919,25 @@ CREATE OR ALTER PROCEDURE solNorte.actualizar_descuento
     @porcentaje DECIMAL(3,2) = NULL
 AS
 BEGIN
-	IF NOT EXISTS (SELECT 1 FROM solNorte.descuento WHERE ID_descuento = @ID_descuento)
-		BEGIN
-			RAISERROR('El descuento especificado no existe', 16, 1);
-			RETURN;
-		END
-	UPDATE solNorte.descuento
-		SET 
-			descripcion = ISNULL(@descripcion, descripcion),
-			tipo_descuento = ISNULL(@tipo_descuento, tipo_descuento),
-			porcentaje = ISNULL(@porcentaje, porcentaje)
-		WHERE ID_descuento = @ID_descuento;
+    SET NOCOUNT ON;
+
+    IF NOT EXISTS (SELECT 1 FROM solNorte.descuento WHERE ID_descuento = @ID_descuento)
+    BEGIN
+        RAISERROR('El descuento especificado no existe', 16, 1);
+        RETURN;
+    END;
+
+    UPDATE solNorte.descuento
+    SET 
+        descripcion = COALESCE(@descripcion, descripcion),
+        tipo_descuento = COALESCE(@tipo_descuento, tipo_descuento),
+        porcentaje = COALESCE(@porcentaje, porcentaje)
+    WHERE ID_descuento = @ID_descuento;
+
+    PRINT FORMATMESSAGE('Descuento ID %d actualizado correctamente.', @ID_descuento);
 END;
-GO	
+GO
+
 --Borrar descuento
 CREATE OR ALTER PROCEDURE solNorte.eliminar_descuento
     @ID_descuento INT
@@ -933,10 +945,11 @@ AS
 BEGIN
 	IF NOT EXISTS (SELECT 1 FROM solNorte.descuento WHERE ID_descuento = @ID_descuento)
 		BEGIN
-			RAISERROR('El descuento especificado no existe', 16, 1);
+			RAISERROR('El descuento especificado no existe. ID: %d', 16, 1, @ID_descuento);
 			RETURN;
 		END
-		DELETE FROM solNorte.descuento
+		UPDATE solNorte.descuento
+		SET borrado = 1, fecha_borrado = GETDATE()
 		WHERE ID_descuento = @ID_descuento;
 END
 GO
@@ -1021,15 +1034,12 @@ BEGIN
     SET anulada = 1,
         fecha_anulacion = GETDATE()
     WHERE ID_factura = @ID_factura;
-END
+END;
+GO
 
 
 -- Al ser un documento legal, la factura no se puede modificar ni borrar
 --=====================================================DETALLE FACTURA=====================================================--
-ALTER TABLE solNorte.detalle_factura
-ADD activo BIT NOT NULL DEFAULT 1;
-GO
-
 CREATE OR ALTER PROCEDURE solNorte.insertar_detalle_factura
 	@descripcion VARCHAR (70),
 	@cantidad INT,
@@ -1093,14 +1103,14 @@ CREATE PROCEDURE eliminar_detalle_factura -- eliminado logico
     @ID_detalle_factura INT
 AS
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM solNorte.detalle_factura WHERE ID_detalle_factura = @ID_detalle_factura AND borrado = 1)
+    IF NOT EXISTS (SELECT 1 FROM solNorte.detalle_factura WHERE ID_detalle_factura = @ID_detalle_factura AND borrado = 0)
     BEGIN
         RAISERROR('El detalle de factura no existe o ya esta eliminado. ID: %d', 16, 1, @ID_detalle_factura);
         RETURN;
     END
 
     UPDATE solNorte.detalle_factura
-    SET borrado = 0, fecha_borrado = GETDATE()
+    SET borrado = 1, fecha_borrado = GETDATE()
     WHERE ID_detalle_factura = @ID_detalle_factura;
 END;
 GO
@@ -1260,7 +1270,7 @@ END
 GO
 
 /**
-	Este sp modifica un registro de reserva_sum
+	Este sp modifica un registro de reserva_sum, los campos son todos opcionales, puede venir un campo solo o todos.
 	@param	ID_reserva		id para identificar el registro que se quiere modificar
 	@param	fecha_reserva	fecha para la cual se reserva el sum, no de cuando se efectúa la transacción de la reserva como tal
 	@param	hora_desde		hora inicial de la reserva
@@ -1270,24 +1280,34 @@ GO
 */
 CREATE OR ALTER PROCEDURE solNorte.modificar_reserva_sum
     @ID_reserva INT,
-    @fecha_reserva DATETIME,
-    @hora_desde TIME,
-    @hora_hasta TIME,
-    @valor_hora DECIMAL(8,2),
-    @id_socio INT
+    @fecha_reserva DATETIME = NULL,
+    @hora_desde TIME = NULL,
+    @hora_hasta TIME = NULL,
+    @valor_hora DECIMAL(8,2) = NULL,
+    @id_socio INT = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
-    
+
+    IF NOT EXISTS (SELECT 1 FROM solNorte.reserva_sum WHERE ID_reserva = @ID_reserva)
+    BEGIN
+        RAISERROR('La reserva especificada no existe. ID: %d', 16, 1, @ID_reserva);
+        RETURN;
+    END
+
     UPDATE solNorte.reserva_sum
-    SET fecha_reserva = @fecha_reserva,
-        hora_desde = @hora_desde,
-        hora_hasta = @hora_hasta,
-        valor_hora = @valor_hora,
-        id_socio = @id_socio
+    SET 
+        fecha_reserva = COALESCE(@fecha_reserva, fecha_reserva),
+        hora_desde = COALESCE(@hora_desde, hora_desde),
+        hora_hasta = COALESCE(@hora_hasta, hora_hasta),
+        valor_hora = COALESCE(@valor_hora, valor_hora),
+        id_socio = COALESCE(@id_socio, id_socio)
     WHERE ID_reserva = @ID_reserva;
+
+    PRINT FORMATMESSAGE('Reserva ID %d modificada correctamente.', @ID_reserva);
 END
 GO
+
 
 
 --=====================================================Entrada pileta=====================================================--

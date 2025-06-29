@@ -727,31 +727,40 @@ GO
 --Modificar horario de actividad
 CREATE OR ALTER PROCEDURE solNorte.modificar_horario_de_actividad
     @ID_horario INT,
-    @dia CHAR(10),
-    @hora_inicio TIME,
-    @hora_fin TIME,
-    @id_actividad INT
+    @dia CHAR(10) = NULL,
+    @hora_inicio TIME = NULL,
+    @hora_fin TIME = NULL,
+    @id_actividad INT = NULL
 AS
 BEGIN
+    SET NOCOUNT ON;
+
+    -- Validación existencia
     IF NOT EXISTS (SELECT 1 FROM solNorte.horario_de_actividad WHERE ID_horario = @ID_horario)
     BEGIN
         RAISERROR('El horario especificado no existe.', 16, 1);
         RETURN;
     END
-    IF @hora_inicio > @hora_fin
+
+    -- Validar lógica de horarios (solo si ambos no son NULL)
+    IF @hora_inicio IS NOT NULL AND @hora_fin IS NOT NULL AND @hora_inicio > @hora_fin
     BEGIN
         RAISERROR('La hora de inicio no puede ser mayor que la hora de fin.', 16, 1);
         RETURN;
     END;
 
+    -- Actualización flexible
     UPDATE solNorte.horario_de_actividad
-    SET dia = ISNULL(@dia, dia),
-        hora_inicio = ISNULL(@hora_inicio, hora_inicio),
-        hora_fin = ISNULL(@hora_fin, hora_fin),
-        id_actividad = ISNULL(@id_actividad, id_actividad)
+    SET dia = COALESCE(@dia, dia),
+        hora_inicio = COALESCE(@hora_inicio, hora_inicio),
+        hora_fin = COALESCE(@hora_fin, hora_fin),
+        id_actividad = COALESCE(@id_actividad, id_actividad)
     WHERE ID_horario = @ID_horario;
+
+    PRINT FORMATMESSAGE('Horario ID %d modificado correctamente.', @ID_horario);
 END;
 GO
+
 
 --Borrar horario
 CREATE OR ALTER PROCEDURE solNorte.borrar_horario_de_actividad

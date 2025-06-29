@@ -654,7 +654,7 @@ BEGIN
         BEGIN RAISERROR('La cuota no existe o ya fue eliminada.', 16, 1); RETURN; END
 
     UPDATE solNorte.cuota_membresia
-    SET borrado = 1
+    SET borrado = 1, fecha_borrado = GETDATE()
     WHERE ID_cuota = @ID_cuota;
 END;
 GO
@@ -695,7 +695,7 @@ BEGIN
 			RAISERROR('La actividad especificada no existe.', 16, 1);
 			RETURN;
 		END
-	IF UPPER(@dia) NOT IN ('LUNES','MARTES','MI�RCOLES','JUEVES','VIERNES','SABADO','DOMINGO')
+	IF UPPER(@dia) NOT IN ('LUNES','MARTES','MIERCOLES','JUEVES','VIERNES','SABADO','DOMINGO')
 		BEGIN
 			RAISERROR('El dia debe ser un dia de la semana valido.', 16, 1);
 			RETURN;

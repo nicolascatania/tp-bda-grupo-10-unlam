@@ -676,7 +676,7 @@ BEGIN
     END
 
     INSERT INTO solNorte.actividad (nombre_actividad, costo_mensual, edad_minima, edad_maxima)
-    VALUES (@nombre_actividad, @costo_mensual, @edad_minima, @edad_maxima);
+    VALUES (@nombre_membresia, @costo_mensual, @edad_minima, @edad_maxima);
 END;
 GO
 
@@ -1057,14 +1057,14 @@ CREATE PROCEDURE eliminar_detalle_factura -- eliminado logico
     @ID_detalle_factura INT
 AS
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM solNorte.detalle_factura WHERE ID_detalle_factura = @ID_detalle_factura AND activo = 1)
+    IF NOT EXISTS (SELECT 1 FROM solNorte.detalle_factura WHERE ID_detalle_factura = @ID_detalle_factura AND borrado = 1)
     BEGIN
         RAISERROR('El detalle de factura no existe o ya esta eliminado. ID: %d', 16, 1, @ID_detalle_factura);
         RETURN;
     END
 
     UPDATE solNorte.detalle_factura
-    SET activo = 0
+    SET borrado = 0, fecha_borrado = GETDATE()
     WHERE ID_detalle_factura = @ID_detalle_factura;
 END;
 GO
@@ -1151,7 +1151,7 @@ BEGIN
 END
 GO
 
-CREATE OR ALTER PROCEDURE v.eliminar_pago
+CREATE OR ALTER PROCEDURE solNorte.eliminar_pago
     @ID_pago INT
 AS
 BEGIN
@@ -1305,8 +1305,6 @@ GO
 	No tiene sentido que una entrada pueda modificarse 
 **/
 
---=====================================================Entrada pileta=====================================================--
-=======
 --=====================================================Reembolso=====================================================--
 /**
 	Da de alta un reembolso 

@@ -793,18 +793,30 @@ END;
 GO
 
 --Modificar inscripcion a una actividad
-CREATE PROCEDURE solNorte.modificar_inscripcion_actividad
+CREATE OR ALTER PROCEDURE solNorte.modificar_inscripcion_actividad
     @ID_inscripcion INT,
-    @fecha_inscripcion DATE,
-    @id_actividad INT,
-    @id_socio INT
+    @fecha_inscripcion DATE = NULL,
+    @id_actividad INT = NULL,
+    @id_socio INT = NULL
 AS
 BEGIN
+    SET NOCOUNT ON;
+
+    -- Validar que exista la inscripción
+    IF NOT EXISTS (SELECT 1 FROM solNorte.inscripcion_actividad WHERE ID_inscripcion = @ID_inscripcion)
+    BEGIN
+        RAISERROR('La inscripción especificada no existe.', 16, 1);
+        RETURN;
+    END;
+
+    -- Actualizar solamente los campos provistos
     UPDATE solNorte.inscripcion_actividad
-    SET fecha_inscripcion = @fecha_inscripcion,
-        id_actividad = @id_actividad,
-        id_socio = @id_socio
+    SET fecha_inscripcion = COALESCE(@fecha_inscripcion, fecha_inscripcion),
+        id_actividad = COALESCE(@id_actividad, id_actividad),
+        id_socio = COALESCE(@id_socio, id_socio)
     WHERE ID_inscripcion = @ID_inscripcion;
+
+    PRINT FORMATMESSAGE('Inscripción ID %d modificada correctamente.', @ID_inscripcion);
 END;
 GO
 

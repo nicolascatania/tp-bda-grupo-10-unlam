@@ -58,6 +58,25 @@ BEGIN
 END
 GO
 
+--para la hoja responsables de pago (socios mayores)
+CREATE TABLE #temporal_ResponsablesDePago(
+	nro_de_socio VARCHAR(10),
+	nombre VARCHAR(20),
+	apellido VARCHAR(20),
+	DNI VARCHAR(10),
+	mail VARCHAR(50),
+	fecha_nacimiento VARCHAR(10),
+	telefono_contacto VARCHAR(20),
+	telefono_emergencia VARCHAR(20),
+	nombre_obra_social VARCHAR(20),
+	nro_obra_social VARCHAR(20),
+	telefono_contacto_emergencia VARCHAR(30)
+
+);
+GO
+
+
+
 
 IF NOT EXISTS (
     SELECT * 

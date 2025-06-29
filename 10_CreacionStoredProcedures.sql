@@ -835,7 +835,7 @@ GO
 --Inserta un registro de asistencia 
 CREATE OR ALTER PROCEDURE solNorte.insertar_asistencia
     @fecha DATE,
-    @asistio BIT,
+    @asistio CHAR(1),
     @id_inscripcion_actividad INT = NULL
 AS
 BEGIN
@@ -847,24 +847,35 @@ BEGIN
         WHERE ID_inscripcion = @id_inscripcion_actividad
     )
     BEGIN
-        RAISERROR('La inscripción a actividad especificada no existe.', 16, 1);
+        RAISERROR('La inscripción a actividad especificada no existe. ID: %d', 16, 1, @id_inscripcion_actividad);
         RETURN;
     END
 
-    -- Validar que la fecha no sea futura
     IF @fecha > CAST(GETDATE() AS DATE)
     BEGIN
         RAISERROR('No se puede registrar una asistencia con fecha futura.', 16, 1);
         RETURN;
     END
 
+	IF EXISTS(
+		SELECT 1
+		FROM solNorte.asistencia
+		WHERE id_inscripcion_actividad = @id_inscripcion_actividad
+			AND fecha = @fecha
+			AND borrado = 0
+	)
+	BEGIN
+		RAISERROR ('Ya existe un registro de asistencia para esta inscripción en la fecha especificada', 16, 1);
+		RETURN
+	END
+
     -- Insertar la asistencia
     INSERT INTO solNorte.asistencia (fecha, asistio, id_inscripcion_actividad)
     VALUES (@fecha, @asistio, @id_inscripcion_actividad);
 
+	DECLARE @id INT = SCOPE_IDENTITY();
 
-
-    PRINT FORMATMESSAGE('Asistencia registrada correctamente. ID: %d, fecha: %s, asistio %s', @);
+    PRINT FORMATMESSAGE('Asistencia registrada correctamente. ID: %d, fecha: %s, asistio %s', @id, @fecha, @asistio);
 END;
 GO
 

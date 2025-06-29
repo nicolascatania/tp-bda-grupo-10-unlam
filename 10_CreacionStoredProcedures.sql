@@ -1,7 +1,6 @@
 USE Com2900G10;
 GO
 
---=====================================================CREACIONES DE SP PARA ABM DE CADA TABLA=====================================================--
 --==========================================Crear SP ABM grupo_familiar==========================================--
 
 CREATE OR ALTER PROCEDURE solNorte.alta_grupo_familiar
@@ -311,7 +310,7 @@ BEGIN
     --validar existencia del socio
     IF NOT EXISTS (SELECT 1 FROM solNorte.socio WHERE ID_socio = @ID_socio AND borrado = 0)
     BEGIN
-        RAISERROR('El socio a modificar no existe.', 16, 1);
+        RAISERROR('El socio a modificar no existe. ID: %d', 16, 1, @ID_socio);
         RETURN;
     END
 
@@ -328,7 +327,7 @@ BEGIN
 	--validar telefono
 	IF LEN(@telefono) <> 10
     BEGIN
-        RAISERROR('Teléfono debe tener 10 dígitos.', 16, 1);
+        RAISERROR('Telefono debe tener 10 digitos. No es valido %d', 16, 1, @telefono);
         RETURN;
     END
 
@@ -820,7 +819,7 @@ AS
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM solNorte.actividad WHERE ID_actividad = @id_inscripcion_actividad)
     BEGIN
-        RAISERROR('La inscripciï¿½n a actividad especificada no existe.', 16, 1);
+        RAISERROR('La inscripcion a actividad especificada no existe.', 16, 1);
         RETURN;
     END
     INSERT INTO solNorte.asistencia (fecha, asistio, id_inscripcion_actividad)

@@ -231,7 +231,7 @@ BEGIN
 	CREATE TABLE dominio.asistencia (
 		ID_asistencia INT IDENTITY(1,1) PRIMARY KEY,
 		fecha DATE,
-		asistio BIT NOT NULL,
+		asistio CHAR(1) NOT NULL CHECK (asistio IN ('J', 'A', 'P')),		
 		id_inscripcion_actividad INT NOT NULL,
 		CONSTRAINT FK_id_inscripcion_actividad FOREIGN KEY (id_inscripcion_actividad) 
 			REFERENCES dominio.actividad(ID_actividad),
@@ -1079,6 +1079,26 @@ CREATE OR ALTER PROCEDURE dominio.insertar_actividad
     @edad_maxima INT
 AS
 BEGIN
+--validaciones
+	--validar cadena nula
+	IF LEN(TRIM(@nombre_actividad)) = 0
+	BEGIN
+		RAISERROR('El nombre de la actividad no puede estar vacío.', 16, 1);
+		RETURN;
+	END
+    -- Validar costo no negativo
+    IF @costo_mensual < 0
+    BEGIN
+        RAISERROR('El costo mensual no puede ser negativo.', 16, 1);
+        RETURN;
+    END
+    -- Validar edades no negativas
+    IF @edad_minima < 0 OR @edad_maxima < 0
+    BEGIN
+        RAISERROR('Las edades no pueden ser negativas.', 16, 1);
+        RETURN;
+    END
+	--validar edades
  IF @edad_minima > @edad_maxima
     BEGIN
         RAISERROR('La edad minima no puede ser mayor que la edad maxima.', 16, 1);
@@ -1104,12 +1124,31 @@ BEGIN
 			RAISERROR('La actividad especificada no existe.', 16, 1);
 			RETURN;
 		END
-    IF @edad_minima > @edad_maxima
-		BEGIN
-			RAISERROR('La edad minima no puede ser mayor que la edad maxima.', 16, 1);
-			RETURN;
-		END
-
+	--validar cadena nula
+	IF LEN(TRIM(@nombre_actividad)) = 0
+	BEGIN
+		RAISERROR('El nombre de la actividad no puede estar vacío.', 16, 1);
+		RETURN;
+	END
+    -- Validar costo no negativo
+    IF @costo_mensual < 0
+    BEGIN
+        RAISERROR('El costo mensual no puede ser negativo.', 16, 1);
+        RETURN;
+    END
+    -- Validar edades no negativas
+    IF @edad_minima < 0 OR @edad_maxima < 0
+    BEGIN
+        RAISERROR('Las edades no pueden ser negativas.', 16, 1);
+        RETURN;
+    END
+	--validar edades
+ IF @edad_minima > @edad_maxima
+    BEGIN
+        RAISERROR('La edad minima no puede ser mayor que la edad maxima.', 16, 1);
+        RETURN;
+    END
+	
     UPDATE dominio.actividad
     SET nombre_actividad = ISNULL(@nombre_actividad, nombre_actividad),
         costo_mensual = ISNULL(@costo_mensual, costo_mensual),
@@ -1217,6 +1256,57 @@ CREATE OR ALTER PROCEDURE dominio.insertar_inscripcion_actividad
     @id_socio INT
 AS
 BEGIN
+--validaciones
+		-- 1. Validar que la actividad exista y no esté borrada
+        IF NOT EXISTS (SELECT 1 FROM dominio.actividad WHERE ID_actividad = @id_actividad AND borrado = 0)
+        BEGIN
+            RAISERROR('La actividad especificada no existe o está dada de baja.', 16, 1);
+            RETURN;
+        END
+        
+        -- 2. Validar que el socio exista y no esté borrado
+        IF NOT EXISTS (SELECT 1 FROM dominio.socio WHERE ID_socio = @id_socio AND borrado = 0)
+        BEGIN
+            RAISERROR('El socio especificado no existe o está dado de baja.', 16, 1);
+            RETURN;
+        END
+		-- 3. Validar que no exista ya una inscripción activa para la misma actividad y socio
+        IF EXISTS (
+            SELECT 1 
+            FROM dominio.inscripcion_actividad 
+            WHERE id_socio = @id_socio 
+              AND id_actividad = @id_actividad
+              AND borrado = 0
+        )
+        BEGIN
+            RAISERROR('El socio ya está inscrito en esta actividad.', 16, 1);
+            RETURN;
+        END
+
+		 -- 4. Validar requisitos de edad
+        DECLARE @edad_socio INT, @edad_minima INT, @edad_maxima INT;
+        
+        -- Calcular edad del socio
+        SELECT @edad_socio = DATEDIFF(YEAR, fecha_nacimiento, GETDATE()) - 
+                            CASE 
+                                WHEN MONTH(GETDATE()) < MONTH(fecha_nacimiento) OR 
+                                     (MONTH(GETDATE()) = MONTH(fecha_nacimiento) AND DAY(GETDATE()) < DAY(fecha_nacimiento) 
+                                THEN 1 
+                                ELSE 0 
+                            END
+        FROM dominio.socio 
+        WHERE ID_socio = @id_socio;
+		 -- Obtener rangos de edad de la actividad
+        SELECT @edad_minima = edad_minima, @edad_maxima = edad_maxima
+        FROM dominio.actividad
+        WHERE ID_actividad = @id_actividad;
+        -- Validar edad
+        IF @edad_socio < @edad_minima OR @edad_socio > @edad_maxima
+        BEGIN
+            RAISERROR('El socio no cumple con los requisitos de edad para esta actividad. Edad requerida: %d a %d años. Edad del socio: %d', 16, 1, @edad_minima, @edad_maxima, @edad_socio);
+            RETURN;
+        END
+
     INSERT INTO dominio.inscripcion_actividad (fecha_inscripcion, id_actividad, id_socio)
     VALUES (@fecha_inscripcion, @id_actividad, @id_socio);
 END;
@@ -1230,11 +1320,57 @@ CREATE OR ALTER PROCEDURE dominio.modificar_inscripcion_actividad
     @id_socio INT
 AS
 BEGIN
-    UPDATE dominio.inscripcion_actividad
-    SET fecha_inscripcion = @fecha_inscripcion,
-        id_actividad = @id_actividad,
-        id_socio = @id_socio
-    WHERE ID_inscripcion = @ID_inscripcion;
+--validaciones
+        -- 1. Validar que la inscripción exista y no esté borrada
+        IF NOT EXISTS (SELECT 1 FROM dominio.inscripcion_actividad WHERE ID_inscripcion = @ID_inscripcion AND borrado = 0)
+        BEGIN
+            RAISERROR('La inscripción especificada no existe o está dada de baja.', 16, 1);
+            RETURN;
+        END        
+        -- Validar actividad
+		IF @id_actividad <> (SELECT id_actividad FROM dominio.inscripcion_actividad WHERE ID_inscripcion = @ID_inscripcion)
+        BEGIN
+            IF NOT EXISTS (SELECT 1 FROM dominio.actividad WHERE ID_actividad = @id_actividad AND borrado = 0)
+            BEGIN
+                RAISERROR('La actividad especificada no existe o está dada de baja.', 16, 1);
+                RETURN;
+            END
+        END
+        
+        -- Validar socio (solo si es diferente al actual)
+        IF @id_socio <> (SELECT id_socio FROM dominio.inscripcion_actividad WHERE ID_inscripcion = @ID_inscripcion)
+        BEGIN
+            IF NOT EXISTS (SELECT 1 FROM dominio.socio WHERE ID_socio = @id_socio AND borrado = 0)
+            BEGIN
+                RAISERROR('El socio especificado no existe o está dado de baja.', 16, 1);
+                RETURN;
+            END
+        END
+
+        -- Validar duplicados solo si cambia actividad o socio
+        IF (@id_actividad <> (SELECT id_actividad FROM dominio.inscripcion_actividad WHERE ID_inscripcion = @ID_inscripcion) OR
+           (@id_socio <> (SELECT id_socio FROM dominio.inscripcion_actividad WHERE ID_inscripcion = @ID_inscripcion))
+        BEGIN
+            IF EXISTS (
+                SELECT 1 
+                FROM dominio.inscripcion_actividad 
+                WHERE id_socio = @id_socio 
+                  AND id_actividad = @id_actividad
+                  AND ID_inscripcion <> @ID_inscripcion
+                  AND borrado = 0
+            )
+            BEGIN
+                RAISERROR('El socio ya está inscrito en esta actividad.', 16, 1);
+                RETURN;
+            END
+        END
+		
+     -- Actualizar la inscripción
+        UPDATE dominio.inscripcion_actividad
+        SET fecha_inscripcion = @fecha_inscripcion,
+            id_actividad = @id_actividad,
+            id_socio = @id_socio
+        WHERE ID_inscripcion = @ID_inscripcion;
 END;
 GO
 
@@ -1243,8 +1379,31 @@ CREATE OR ALTER PROCEDURE dominio.borrar_inscripcion_actividad
     @ID_inscripcion INT
 AS
 BEGIN
-    DELETE FROM dominio.inscripcion_actividad
-    WHERE ID_inscripcion = @ID_inscripcion;
+--validaciones
+-- 1. Validar que la inscripción exista y no esté ya borrada
+        IF NOT EXISTS (SELECT 1 FROM dominio.inscripcion_actividad WHERE ID_inscripcion = @ID_inscripcion AND borrado = 0)
+        BEGIN
+            RAISERROR('La inscripción especificada no existe o ya está dada de baja.', 16, 1);
+            RETURN;
+        END
+        
+        -- 2. Validar que no tenga asistencias registradas
+        IF EXISTS (
+            SELECT 1 
+            FROM dominio.asistencia 
+            WHERE id_inscripcion_actividad = @ID_inscripcion
+              AND borrado = 0
+        )
+        BEGIN
+            RAISERROR('No se puede borrar la inscripción porque tiene asistencias registradas.', 16, 1);
+            RETURN;
+        END
+        
+        -- 3. Realizar borrado
+        UPDATE dominio.inscripcion_actividad
+        SET borrado = 1,
+            fecha_borrado = GETDATE()
+        WHERE ID_inscripcion = @ID_inscripcion;
 END;
 GO
 
@@ -1253,54 +1412,137 @@ GO
 --Inserta un registro de asistencia 
 CREATE OR ALTER PROCEDURE dominio.insertar_asistencia
     @fecha DATE,
-    @asistio BIT,
+    @asistio CHAR(1),
     @id_inscripcion_actividad INT = NULL
 AS
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM dominio.actividad WHERE ID_actividad = @id_inscripcion_actividad)
+  -- Validar valor de asistio
+    IF @asistio NOT IN ('J', 'A', 'P')
     BEGIN
-        RAISERROR('La inscripcion a actividad especificada no existe.', 16, 1);
+        RAISERROR('El valor para asistio debe ser J (Justificado), A (Asistió) o P (No asistió).', 16, 1);
         RETURN;
     END
-    INSERT INTO dominio.asistencia (fecha, asistio, id_inscripcion_actividad)
-    VALUES (@fecha, @asistio, @id_inscripcion_actividad);
+
+    -- Validar que la inscripción exista, esté activa y no borrada
+    IF NOT EXISTS (
+        SELECT 1 
+        FROM dominio.inscripcion_actividad ia
+        JOIN dominio.actividad a ON ia.ID_actividad = a.ID_actividad
+        WHERE ia.ID_inscripcion = @id_inscripcion_actividad
+          AND ia.borrado = 0
+          AND a.borrado = 0
+          AND @fecha BETWEEN ia.fecha_inscripcion AND ISNULL(a.fecha_fin, GETDATE())
+    )
+    BEGIN
+        RAISERROR('La inscripción no existe, está inactiva o la fecha no está dentro del período válido.', 16, 1);
+        RETURN;
+    END
+
+    -- Validar unicidad 
+    IF EXISTS (
+        SELECT 1 
+        FROM dominio.asistencia 
+        WHERE id_inscripcion_actividad = @id_inscripcion_actividad 
+          AND fecha = @fecha
+          AND borrado = 0
+    )
+    BEGIN
+        RAISERROR('Ya existe un registro de asistencia para esta inscripción en la fecha especificada.', 16, 1);
+        RETURN;
+    END
+
+    INSERT INTO dominio.asistencia (fecha, asistio, id_inscripcion_actividad, borrado)
+    VALUES (@fecha, @asistio, @id_inscripcion_actividad, 0);
 END;
 GO
 
 -- Modifica un registro de asistencia
 CREATE OR ALTER PROCEDURE dominio.modificar_asistencia
     @ID_asistencia INT,
-    @fecha DATE,
-    @asistio BIT,
-    @id_inscripcion_actividad INT
+    @fecha DATE = NULL,
+    @asistio CHAR(1) = NULL,
+    @id_inscripcion_actividad INT = NULL
 AS
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM dominio.asistencia WHERE ID_asistencia = @ID_asistencia)
+   -- Validar que el registro exista
+    IF NOT EXISTS (SELECT 1 FROM dominio.asistencia WHERE ID_asistencia = @ID_asistencia AND borrado = 0)
     BEGIN
-        RAISERROR('El registro de asistencia especificado no existe.', 16, 1);
+        RAISERROR('El registro de asistencia especificado no existe o está borrado.', 16, 1);
         RETURN;
     END
+
+    -- Validar valor de asistio
+    IF @asistio IS NOT NULL AND @asistio NOT IN ('J', 'A', 'P')
+    BEGIN
+        RAISERROR('El valor para asistio debe ser J (Justificado), A (Asistió) o P (No asistió).', 16, 1);
+        RETURN;
+    END
+
+    -- Validar nueva inscripción si se cambia
+    IF @id_inscripcion_actividad IS NOT NULL
+			BEGIN
+				IF NOT EXISTS (
+			SELECT 1 
+			FROM dominio.inscripcion_actividad ia
+			JOIN dominio.actividad a ON ia.ID_actividad = a.ID_actividad
+			WHERE ia.ID_inscripcion = @id_inscripcion_actividad
+			  AND ia.borrado = 0
+			  AND a.borrado = 0
+		)
+		BEGIN
+			RAISERROR('La inscripción no existe o está inactiva.', 16, 1);
+			RETURN;
+		END
+    END
+
+    -- Validar unicidad
+    IF EXISTS (
+        SELECT 1 
+        FROM dominio.asistencia 
+        WHERE id_inscripcion_actividad = ISNULL(@id_inscripcion_actividad, (SELECT id_inscripcion_actividad FROM dominio.asistencia WHERE ID_asistencia = @ID_asistencia))
+          AND fecha = ISNULL(@fecha, (SELECT fecha FROM dominio.asistencia WHERE ID_asistencia = @ID_asistencia))
+          AND ID_asistencia <> @ID_asistencia
+          AND borrado = 0
+    )
+    BEGIN
+        RAISERROR('Ya existe otro registro de asistencia para esta inscripción en la fecha especificada.', 16, 1);
+        RETURN;
+    END
+
     UPDATE dominio.asistencia
-    SET fecha = @fecha,
-        asistio = @asistio,
-        id_inscripcion_actividad = @id_inscripcion_actividad
-    WHERE ID_asistencia = @ID_asistencia;
+    SET 
+        fecha = ISNULL(@fecha, fecha),
+        asistio = ISNULL(@asistio, asistio),
+        id_inscripcion_actividad = ISNULL(@id_inscripcion_actividad, id_inscripcion_actividad)
+    WHERE 
+        ID_asistencia = @ID_asistencia;
 END;
 GO
-
 
 --Borrar un registro de asistencia 
 CREATE OR ALTER PROCEDURE dominio.borrar_asistencia
     @ID_asistencia INT
 AS 
 BEGIN
-	IF NOT EXISTS (SELECT 1 FROM dominio.asistencia WHERE ID_asistencia = @ID_asistencia)
+	 --Validar que el registro exista y no esté ya borrado
+        IF NOT EXISTS (
+            SELECT 1 
+            FROM dominio.asistencia 
+            WHERE ID_asistencia = @ID_asistencia 
+              AND borrado = 0
+        )
         BEGIN
-            RAISERROR('El registro de asistencia especificado no existe', 16, 1);
+            RAISERROR('El registro de asistencia no existe o ya está dado de baja.', 16, 1);
             RETURN;
-        END;
-	DELETE FROM dominio.asistencia
-    WHERE ID_asistencia = @ID_asistencia;
+        END
+        
+        -- borrado 
+        UPDATE dominio.asistencia
+        SET 
+            borrado = 1,
+            fecha_borrado = GETDATE()
+        WHERE 
+            ID_asistencia = @ID_asistencia;
 END;
 GO   
 
@@ -1356,44 +1598,67 @@ IF NOT EXISTS (SELECT 1 FROM dominio.descuento WHERE ID_descuento = @ID_descuent
     END
     DELETE FROM dominio.descuento
     WHERE ID_descuento = @ID_descuento;
+END;
+GO	
 
 --======================================================Deuda======================================================-- 
 --Insertar deudas
-CREATE OR ALTER PROCEDURE dominio.insertar_deudas
-	@recargo_por_vencimiento DECIMAL(3,2),
+CREATE OR ALTER PROCEDURE dominio.insertar_deuda
+    @recargo_por_vencimiento DECIMAL(3,2),
     @deuda_acumulada DECIMAL(10,2),
     @fecha_readmision DATE = NULL,
     @id_factura INT,
     @id_socio INT
 AS
 BEGIN
-    -- Validar que la factura exista
-    IF NOT EXISTS (SELECT 1 FROM dominio.factura WHERE ID_factura = @id_factura)
-    BEGIN
-        RAISERROR('La factura especificada no existe.', 16, 1);
-        RETURN;
-    END
-    
-    -- Validar que el socio exista
-    IF NOT EXISTS (SELECT 1 FROM dominio.socio WHERE ID_socio = @id_socio)
-    BEGIN
-        RAISERROR('El socio especificado no existe.', 16, 1);
-        RETURN;
-    END
-    INSERT INTO dominio.deuda (
-        recargo_por_vencimiento,
-        deuda_acumulada,
-        fecha_readmision,
-        id_factura,
-        id_socio
-    )
-    VALUES (
-        @recargo_por_vencimiento,
-        @deuda_acumulada,
-        @fecha_readmision,
-        @id_factura,
-        @id_socio
-    );
+		-- Validar que la factura exista
+		IF NOT EXISTS (SELECT 1 FROM dominio.factura WHERE ID_factura = @id_factura AND borrado = 0)
+        BEGIN
+            RAISERROR('La factura especificada no existe o está dada de baja.', 16, 1);
+            RETURN;
+        END
+
+        --Validar que el socio exista y no esté borrado
+        IF NOT EXISTS (SELECT 1 FROM dominio.socio WHERE ID_socio = @id_socio AND borrado = 0)
+        BEGIN
+            RAISERROR('El socio especificado no existe o está dado de baja.', 16, 1);
+            RETURN;
+        END
+
+        -- Validar fecha de readmisión si se proporciona
+        IF @fecha_readmision IS NOT NULL AND @fecha_readmision < CAST(GETDATE() AS DATE)
+        BEGIN
+            RAISERROR('La fecha de readmisión no puede ser anterior a la fecha actual.', 16, 1);
+            RETURN;
+        END
+
+        --Validar que no exista deuda activa para la misma factura
+        IF EXISTS (
+            SELECT 1 
+            FROM dominio.deuda 
+            WHERE id_factura = @id_factura 
+              AND borrado = 0
+        )
+        BEGIN
+            RAISERROR('Ya existe una deuda registrada para esta factura.', 16, 1);
+            RETURN;
+        END
+
+        -- Insertar la deuda
+        INSERT INTO dominio.deuda (
+            recargo_por_vencimiento,
+            deuda_acumulada,
+            fecha_readmision,
+            id_factura,
+            id_socio
+        )
+        VALUES (
+            @recargo_por_vencimiento,
+            @deuda_acumulada,
+            @fecha_readmision,
+            @id_factura,
+            @id_socio
+        );
 END
 GO
 
@@ -1407,36 +1672,65 @@ CREATE OR ALTER PROCEDURE dominio.modificar_deuda
     @id_socio INT = NULL
 AS
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM dominio.deuda WHERE ID_deuda = @ID_deuda)
-    BEGIN
-        RAISERROR('La deuda especificada no existe.', 16, 1);
-        RETURN;
-    END
+		 --Validar que la deuda exista y no esté borrada
+        IF NOT EXISTS (
+            SELECT 1 
+            FROM dominio.deuda 
+            WHERE ID_deuda = @ID_deuda 
+              AND borrado = 0
+        )
+        BEGIN
+            RAISERROR('La deuda especificada no existe o está dada de baja.', 16, 1);
+            RETURN;
+        END
     
-    IF @id_factura IS NOT NULL AND 
-       NOT EXISTS (SELECT 1 FROM dominio.factura WHERE ID_factura = @id_factura)
-    BEGIN
-        RAISERROR('La factura especificada no existe.', 16, 1);
-        RETURN;
-    END
+		--Validar factura si se proporciona
+        IF @id_factura IS NOT NULL
+        BEGIN
+            IF NOT EXISTS (SELECT 1 FROM dominio.factura WHERE ID_factura = @id_factura AND borrado = 0)
+            BEGIN
+                RAISERROR('La nueva factura especificada no existe o está dada de baja.', 16, 1);
+                RETURN;
+            END
+
+            -- Validar que no exista otra deuda con la misma factura
+            IF EXISTS (
+                SELECT 1 
+                FROM dominio.deuda 
+                WHERE id_factura = @id_factura 
+                  AND ID_deuda <> @ID_deuda
+                  AND borrado = 0
+            )
+            BEGIN
+                RAISERROR('Ya existe otra deuda registrada para esta factura.', 16, 1);
+                RETURN;
+            END
+        END
+
+        --Validar socio si se proporciona
+        IF @id_socio IS NOT NULL AND 
+           NOT EXISTS (SELECT 1 FROM dominio.socio WHERE ID_socio = @id_socio AND borrado = 0)
+        BEGIN
+            RAISERROR('El nuevo socio especificado no existe o está dado de baja.', 16, 1);
+            RETURN;
+        END
+		--Validar fecha readmisión si se proporciona
+        IF @fecha_readmision IS NOT NULL AND @fecha_readmision < CAST(GETDATE() AS DATE)
+        BEGIN
+            RAISERROR('La fecha de readmisión no puede ser anterior a la fecha actual.', 16, 1);
+            RETURN;
+        END
     
-    IF @id_socio IS NOT NULL AND 
-       NOT EXISTS (SELECT 1 FROM dominio.socio WHERE ID_socio = @id_socio)
-    BEGIN
-        RAISERROR('El socio especificado no existe.', 16, 1);
-        RETURN;
-    END    
-    
-     -- Actualizar solo los campos proporcionados
-    UPDATE dominio.deuda
-    SET 
-        recargo_por_vencimiento = ISNULL(@recargo_por_vencimiento, recargo_por_vencimiento),
-        deuda_acumulada = ISNULL(@deuda_acumulada, deuda_acumulada),
-        fecha_readmision = ISNULL(@fecha_readmision, fecha_readmision),
-        id_factura = ISNULL(@id_factura, id_factura),
-        id_socio = ISNULL(@id_socio, id_socio)
-    WHERE 
-        ID_deuda = @ID_deuda;
+     -- Actualizar la deuda
+        UPDATE dominio.deuda
+        SET 
+            recargo_por_vencimiento = ISNULL(@recargo_por_vencimiento, recargo_por_vencimiento),
+            deuda_acumulada = ISNULL(@deuda_acumulada, deuda_acumulada),
+            fecha_readmision = ISNULL(@fecha_readmision, fecha_readmision),
+            id_factura = ISNULL(@id_factura, id_factura),
+            id_socio = ISNULL(@id_socio, id_socio)
+        WHERE 
+            ID_deuda = @ID_deuda;
 END
 GO
     
@@ -1445,13 +1739,24 @@ CREATE OR ALTER PROCEDURE dominio.eliminar_deuda
     @ID_deuda INT
 AS
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM dominio.deuda WHERE ID_deuda = @ID_deuda)
+		--Validar que la deuda exista y no esté ya borrada
+        IF NOT EXISTS (
+            SELECT 1 
+            FROM dominio.deuda 
+            WHERE ID_deuda = @ID_deuda 
+              AND borrado = 0
+        )
         BEGIN
-            RAISERROR('La deuda especificada no existe.', 16,1)
+            RAISERROR('La deuda especificada no existe o ya está dada de baja.', 16, 1);
             RETURN;
         END
 
-    DELETE FROM dominio.deuda 
-    WHERE ID_deuda = @ID_deuda;
+        --realizar borrado lógico
+        UPDATE dominio.deuda
+        SET 
+            borrado = 1,
+            fecha_borrado = GETDATE()
+        WHERE 
+            ID_deuda = @ID_deuda;
 END; 
 GO

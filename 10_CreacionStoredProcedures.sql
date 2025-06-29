@@ -772,7 +772,8 @@ BEGIN
         RAISERROR('El horario especificado no existe.', 16, 1);
         RETURN;
     END
-    DELETE FROM solNorte.horario_de_actividad
+    UPDATE solNorte.horario_de_actividad
+	SET borrado = 1, fecha_borrado = GETDATE()
     WHERE ID_horario = @ID_horario;
 END;
 GO

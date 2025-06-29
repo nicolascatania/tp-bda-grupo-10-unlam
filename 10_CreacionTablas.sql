@@ -155,7 +155,7 @@ BEGIN
 	CREATE TABLE solNorte.asistencia (
 		ID_asistencia INT IDENTITY(1,1) PRIMARY KEY,
 		fecha DATE NOT NULL,
-		presentismo CHAR(1) NOT NULL CHECK(presentismo IN ('P', 'J', 'A')), 
+		presentismo CHAR(1) NOT NULL CHECK(presentismo IN ('P', 'J', 'A')), --validar siempre con uppercase
 		id_inscripcion_actividad INT NOT NULL,
 		borrado BIT NOT NULL DEFAULT 0,
 		fecha_borrado DATETIME,

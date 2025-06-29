@@ -862,7 +862,9 @@ BEGIN
     INSERT INTO solNorte.asistencia (fecha, asistio, id_inscripcion_actividad)
     VALUES (@fecha, @asistio, @id_inscripcion_actividad);
 
-    PRINT 'Asistencia registrada correctamente.';
+
+
+    PRINT FORMATMESSAGE('Asistencia registrada correctamente. ID: %d, fecha: %s, asistio %s', @);
 END;
 GO
 
@@ -1066,15 +1068,6 @@ CREATE OR ALTER PROCEDURE solNorte.insertar_detalle_factura
 AS
 BEGIN 
 	SET NOCOUNT ON
-	-- Validaciones
-	IF LEN(RTRIM(@descripcion)) = 0
-        BEGIN RAISERROR('Agregar descripcion.', 16, 1); RETURN; END
-
-    IF @cantidad IS NULL OR @cantidad <= 0
-        BEGIN RAISERROR('Cantidad invalida.', 16, 1); RETURN; END
-
-    IF @subtotal IS NULL OR @subtotal < 0
-        BEGIN RAISERROR('Subtotal invalido.', 16, 1); RETURN; END
 
     IF NOT EXISTS (SELECT 1 FROM solNorte.factura WHERE ID_factura = @id_factura)
         BEGIN RAISERROR('La factura no existe. ID: %d', 16, 1, @id_factura); RETURN; END

@@ -416,10 +416,7 @@ END
 GO
 
 ---------------SP DE CUOTA_MEMBRESIA, FACTURA, DETALLE_FACURA Y PAGO------------------------------------------------
-ALTER TABLE dominio.cuota_membresia
-ADD activo NOT NULL BIT DEFAULT 1; -- 1 = activo, 0 = borrado logico
-GO
-
+-- Los parametros @mes, @nombre_membresia, @edad_minima y @edad_maxima estan validados con CHECK en la creacion de la tabla cuota_membresia
 CREATE OR ALTER PROCEDURE insertar_cuota_membresia
     @mes TINYINT,
     @anio INT,
@@ -432,31 +429,31 @@ AS
 BEGIN
 	SET NOCOUNT ON
     -- Validaciones
-    IF @mes < 1 OR @mes > 12
-        BEGIN RAISERROR('Mes invalido.', 16, 1); RETURN; END
-
     IF @anio < 1900 OR @anio > YEAR(GETDATE()) + 1
-        BEGIN RAISERROR('Año invalido.', 16, 1); RETURN; END
+        BEGIN 
+			RAISERROR('El año es %d es invalido', 16, 1, @anio); 
+			RETURN; 
+		END
 
     IF @monto <= 0
-        BEGIN RAISERROR('Monto invalido.', 16, 1); RETURN; END
-
-    IF LEN(RTRIM(@nombre_membresia)) = 0
-        BEGIN RAISERROR('Agregar nombre de membresia.', 16, 1); RETURN; END
-
-    IF @edad_minima IS NOT NULL AND @edad_maxima IS NOT NULL AND @edad_minima > @edad_maxima
-        BEGIN RAISERROR('Edad invalida.', 16, 1); RETURN; END
+        BEGIN 
+			RAISERROR('El monto %s es invalido', 16, 1, @monto); 
+			RETURN; 
+		END
 
     IF NOT EXISTS (SELECT 1 FROM dominio.socio WHERE ID_socio = @id_socio)
-        BEGIN RAISERROR('El socio no existe.', 16, 1); RETURN; END
+        BEGIN 
+			RAISERROR('El socio con ID %d no existe', 16, 1, @id_socio);
+			RETURN; 
+		END
 
-    -- Insercion
-    INSERT INTO dominio.cuota_membresia (
+	-- Insercion
+    INSERT INTO insertar_cuota_membresia (
         mes, anio, monto, nombre_membresia, edad_minima, edad_maxima, id_socio
     ) VALUES (
         @mes, @anio, @monto, @nombre_membresia, @edad_minima, @edad_maxima, @id_socio
     );
-END;
+END
 GO
 
 CREATE OR ALTER PROCEDURE eliminar_cuota_membresia -- eliminado logico
@@ -464,11 +461,15 @@ CREATE OR ALTER PROCEDURE eliminar_cuota_membresia -- eliminado logico
 AS
 BEGIN
 	SET NOCOUNT ON
-    IF NOT EXISTS (SELECT 1 FROM dominio.cuota_membresia WHERE ID_cuota = @ID_cuota AND activo = 1)
-        BEGIN RAISERROR('La cuota no existe o ya fue eliminada.', 16, 1); RETURN; END
+    IF NOT EXISTS (SELECT 1 FROM dominio.cuota_membresia WHERE ID_cuota = @ID_cuota AND borrado = 0)
+        BEGIN 
+			RAISERROR('La cuota %d no existe o ya fue eliminada', 16, 1, @ID_cuota); 
+			RETURN; 
+		END
 
     UPDATE dominio.cuota_membresia
-    SET activo = 0
+    SET borrado = 1,
+		fecha_borrado = GETDATE()
     WHERE ID_cuota = @ID_cuota;
 END;
 GO
@@ -484,25 +485,26 @@ CREATE OR ALTER PROCEDURE modificar_cuota_membresia
 AS
 BEGIN
 	SET NOCOUNT ON
-    -- Validaciones
-    IF NOT EXISTS (SELECT 1 FROM dominio.cuota_membresia WHERE ID_cuota = @ID_cuota AND activo = 1)
-        BEGIN RAISERROR('La cuota no existe o fue eliminada.', 16, 1); RETURN; END
-
-    IF @mes < 1 OR @mes > 12
-        BEGIN RAISERROR('Mes invalido.', 16, 1); RETURN; END
+    -- Valido que exista
+    IF NOT EXISTS (SELECT 1 FROM dominio.cuota_membresia WHERE ID_cuota = @ID_cuota AND borrado = 0)
+        BEGIN 
+			RAISERROR('La cuota %d no existe o ya fue eliminada', 16, 1, @ID_cuota); 
+			RETURN; 
+		END
 
     IF @anio < 1900 OR @anio > YEAR(GETDATE()) + 1
-        BEGIN RAISERROR('Año invalido.', 16, 1); RETURN; END
+        BEGIN 
+			RAISERROR('El año &d es invalido', 16, 1, @anio); 
+			RETURN; 
+		END
 
     IF @monto <= 0
-        BEGIN RAISERROR('El monto debe ser mayor a cero.', 16, 1); RETURN; END
+        BEGIN 
+			RAISERROR('El monto es invalido', 16, 1);
+			RETURN; 
+		END
 
-    IF LEN(RTRIM(@nombre_membresia)) = 0
-        BEGIN RAISERROR('Agregar nombre de membresia.', 16, 1); RETURN; END
-
-    IF @edad_minima IS NOT NULL AND @edad_maxima IS NOT NULL AND @edad_minima > @edad_maxima
-        BEGIN RAISERROR('Edad invalida.', 16, 1); RETURN; END
-
+    -- Update
     UPDATE dominio.cuota_membresia
     SET mes = @mes,
         anio = @anio,
@@ -530,54 +532,81 @@ BEGIN
 	SET NOCOUNT ON
      -- Validaciones
     IF @nro_factura IS NULL OR LEN(@nro_factura) = 0
-        BEGIN RAISERROR('El numero de factura es obligatorio.', 16, 1); RETURN; END
+        BEGIN 
+			RAISERROR('El numero de factura es obligatorio.', 16, 1); 
+			RETURN; 
+		END
 
     IF LEN(@tipo_factura) = 0 OR LEN(@tipo_factura) > 20
-        BEGIN RAISERROR('Tipo de factura invalida.', 16, 1); RETURN; END
+        BEGIN 
+			RAISERROR('Tipo de factura invalida.', 16, 1); 
+			RETURN; 
+		END
 
 	IF @fecha_emision IS NULL OR @vencimiento_CAE IS NULL OR @vencimiento_CAE < @fecha_emision	
-	BEGIN RAISERROR('Fecha invalida.', 16, 1); RETURN; END
-
-    IF LEN(@CAE) != 14
-        BEGIN RAISERROR('El CAE debe tener 14 caracteres.', 16, 1); RETURN; END
-
-    IF @estado NOT IN ('Pendiente', 'Pagada')
-        BEGIN RAISERROR('Estado debe ser "Pendiente" o "Pagada".', 16, 1); RETURN; END
-
-    IF @importe_total <= 0
-        BEGIN RAISERROR('El importe total invalido.', 16, 1); RETURN; END
+	BEGIN 
+		RAISERROR('Fecha invalida.', 16, 1); 
+		RETURN; 
+	END
 
 	IF @razon_social_emisor IS NULL OR LEN(RTRIM(@razon_social_emisor)) = 0
-        BEGIN RAISERROR('Agregar razón social.', 16, 1); RETURN; END
+        BEGIN 
+			RAISERROR('Agregar razón social.', 16, 1); 
+			RETURN; 
+		END
 
     IF LEN(CAST(@CUIT_emisor AS VARCHAR)) != 11
-        BEGIN RAISERROR('CUIT invalido.', 16, 1); RETURN; END
+        BEGIN 
+			RAISERROR('El CUIT %d es invalido', 16, 1, @CUIT_emisor); 
+			RETURN; 
+		END
 
     IF @vencimiento_CAE < @fecha_emision
-        BEGIN RAISERROR('La fecha de vencimiento CAE invalida.', 16, 1); RETURN; END
+        BEGIN 
+			RAISERROR('La fecha es invalida', 16, 1); 
+			RETURN; 
+		END
 
     IF NOT EXISTS (SELECT 1 FROM dominio.socio WHERE ID_socio = @id_socio)
-        BEGIN RAISERROR('El socio no existe.', 16, 1); RETURN; END
+        BEGIN 
+			RAISERROR('El socio con ID %d no existe', 16, 1, @id_socio);
+			RETURN; 
+		END
 
     -- Insercion
-    INSERT INTO dominio.factura (
-        nro_factura, tipo_factura, fecha_emision, CAE, estado,
-        importe_total, razon_social_emisor, CUIT_emisor, vencimiento_CAE, id_socio
-    )
-    VALUES (
-        @nro_factura, @tipo_factura, @fecha_emision, @CAE, @estado,
-        @importe_total, @razon_social_emisor, @CUIT_emisor, @vencimiento_CAE, @id_socio
-    );
-
+    INSERT INTO dominio.factura (nro_factura, tipo_factura, fecha_emision, CAE, estado,
+								importe_total, razon_social_emisor, CUIT_emisor, vencimiento_CAE, id_socio)
+    VALUES (@nro_factura, @tipo_factura, @fecha_emision, @CAE, @estado,
+			@importe_total, @razon_social_emisor, @CUIT_emisor, @vencimiento_CAE, @id_socio);
 END;
 GO
 
+/* ANULACION DE FACTURA, por motivos legales, una factura puede ser anulada para anular su validez, debe hacerse x medio de ARCA (pero queda fuera del alcance del tp), sin embargo, modelamos esto 
+	ya que el sistema debe ser capaz de identificar las facturas que deben ser llevadas a hacer el trámite de anulación, derivando en nota de credito o en simple reembolso*/
+CREATE OR ALTER PROCEDURE dominio.anular_factura 
+	@ID_factura INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF NOT EXISTS (
+        SELECT 1 
+        FROM dominio.factura 
+        WHERE ID_factura = @ID_factura
+    )
+    BEGIN
+		RAISERROR('La factura con ID %d no existe', 16, 1, @ID_factura);
+        RETURN;
+    END
+
+    UPDATE dominio.factura
+    SET anulada = 1,
+        fecha_anulacion = GETDATE()
+    WHERE ID_factura = @ID_factura;
+END
+
+
 -- Al ser un documento legal, la factura no se puede modificar ni borrar
-
-ALTER TABLE dominio.detalle_factura
-ADD activo BIT NOT NULL DEFAULT 1;
-GO
-
+--=====================================================DETALLE FACTURA=====================================================--
 CREATE OR ALTER PROCEDURE insertar_detalle_factura
 	@descripcion VARCHAR (70),
 	@cantidad INT,
@@ -586,25 +615,16 @@ CREATE OR ALTER PROCEDURE insertar_detalle_factura
 AS
 BEGIN 
 	SET NOCOUNT ON
-	-- Validaciones
-	IF LEN(RTRIM(@descripcion)) = 0
-        BEGIN RAISERROR('Agregar descripcion.', 16, 1); RETURN; END
-
-    IF @cantidad IS NULL OR @cantidad <= 0
-        BEGIN RAISERROR('Cantidad invalida.', 16, 1); RETURN; END
-
-    IF @subtotal IS NULL OR @subtotal < 0
-        BEGIN RAISERROR('Subtotal invalido.', 16, 1); RETURN; END
-
+	-- Validaciones 
     IF NOT EXISTS (SELECT 1 FROM dominio.factura WHERE ID_factura = @id_factura)
-        BEGIN RAISERROR('La factura no existe.', 16, 1); RETURN; END
+        BEGIN 
+			RAISERROR('La factura con ID %d no existe', 16, 1, @id_factura);
+			RETURN; 
+		END
 
     -- Insercion
-    INSERT INTO dominio.detalle_factura (
-        descripcion, cantidad, subtotal, id_factura
-    ) VALUES (
-        @descripcion, @cantidad, @subtotal, @id_factura
-    );
+    INSERT INTO dominio.detalle_factura (descripcion, cantidad, subtotal, id_factura) 
+	VALUES (@descripcion, @cantidad, @subtotal, @id_factura);
 END;
 GO
 
@@ -616,18 +636,13 @@ CREATE OR ALTER PROCEDURE modificar_detalle_factura
 AS
 BEGIN
 	SET NOCOUNT ON
+	DECLARE @mensaje_error VARCHAR(255);
     -- Validaciones
     IF NOT EXISTS (SELECT 1 FROM dominio.detalle_factura WHERE ID_detalle_factura = @ID_detalle_factura)
-        BEGIN RAISERROR('El detalle de factura no existe.', 16, 1); RETURN; END
-
-    IF LEN(RTRIM(@descripcion)) = 0
-        BEGIN RAISERROR('Agregar descipcion.', 16, 1); RETURN; END
-
-    IF @cantidad IS NULL OR @cantidad <= 0
-        BEGIN RAISERROR('Cantidad invalida.', 16, 1); RETURN; END
-
-    IF @subtotal IS NULL OR @subtotal < 0
-        BEGIN RAISERROR('Subtotal invalido.', 16, 1); RETURN; END
+        BEGIN 
+			RAISERROR('El detalle de factura %d no existe', 16, 1, @ID_detalle_factura); 
+			RETURN; 
+		END
 
     UPDATE dominio.detalle_factura
     SET descripcion = @descripcion,
@@ -641,20 +656,18 @@ CREATE PROCEDURE eliminar_detalle_factura -- eliminado logico
     @ID_detalle_factura INT
 AS
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM dominio.detalle_factura WHERE ID_detalle_factura = @ID_detalle_factura AND activo = 1)
+	SET NOCOUNT ON;
+    IF NOT EXISTS (SELECT 1 FROM dominio.detalle_factura WHERE ID_detalle_factura = @ID_detalle_factura AND borrado = 0)
     BEGIN
-        RAISERROR('El detalle de factura no existe o ya esta eliminado.', 16, 1);
+		RAISERROR('El detalle de factura %d no existe o ya esta eliminado.', 16, 1, @ID_detalle_factura);
         RETURN;
     END
 
     UPDATE dominio.detalle_factura
-    SET activo = 0
+    SET borrado = 1,
+		fecha_borrado = GETDATE()
     WHERE ID_detalle_factura = @ID_detalle_factura;
 END;
-GO
-
-ALTER TABLE dominio.pago
-ADD activo BIT NOT NULL DEFAULT 1;
 GO
 
 CREATE OR ALTER PROCEDURE insertar_pago
@@ -665,28 +678,17 @@ CREATE OR ALTER PROCEDURE insertar_pago
     @id_factura INT
 AS
 BEGIN
+	SET NOCOUNT ON;
     -- Validaciones
     IF NOT EXISTS (SELECT 1 FROM dominio.factura WHERE ID_factura = @id_factura)
     BEGIN
-        RAISERROR('La factura no existe.', 16, 1);
-        RETURN;
-    END
-
-    IF @monto <= 0
-    BEGIN
-        RAISERROR('Monto invalido.', 16, 1);
-        RETURN;
-    END
-
-	IF RTRIM(@estado) NOT IN ('Pagado', 'No pagado')
-    BEGIN
-        RAISERROR('Estado invalido".', 16, 1);
+		RAISERROR('La factura %d no existe', 16, 1, @id_factura);
         RETURN;
     END
 
     IF LEN(RTRIM(@medio_de_pago)) = 0
     BEGIN
-        RAISERROR('Medio de pago invalido.', 16, 1);
+        RAISERROR('Agregar medio de pago.', 16, 1);
         RETURN;
     END
 
@@ -703,10 +705,10 @@ CREATE OR ALTER PROCEDURE modificar_pago
     @estado CHAR(10)
 AS
 BEGIN
-	SET NOCOUNT ON
-    IF NOT EXISTS (SELECT 1 FROM dominio.pago WHERE ID_pago = @ID_pago AND activo = 1)
+	SET NOCOUNT ON;
+    IF NOT EXISTS (SELECT 1 FROM dominio.pago WHERE ID_pago = @ID_pago AND borrado = 0)
     BEGIN
-        RAISERROR('El pago no existe o está eliminado.', 16, 1);
+		RAISERROR('El pago %d no existe', 16, 1, @ID_pago);
         RETURN;
     END
 
@@ -716,16 +718,10 @@ BEGIN
         RAISERROR('No se puede modificar un pago con estado "Pagado".', 16, 1);
         RETURN;
 	END
-    
-    IF @monto <= 0
-    BEGIN
-        RAISERROR('El monto debe ser mayor a cero.', 16, 1);
-        RETURN;
-    END
 
     IF LEN(RTRIM(@medio_de_pago)) = 0
     BEGIN
-        RAISERROR('Medio de pago invalido.', 16, 1);
+        RAISERROR('Agregar medio de pago.', 16, 1);
         RETURN;
     END
 
@@ -742,19 +738,21 @@ CREATE OR ALTER PROCEDURE eliminar_pago
     @ID_pago INT
 AS
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM dominio.pago WHERE ID_pago = @ID_pago AND activo = 1)
+	SET NOCOUNT ON;
+    IF NOT EXISTS (SELECT 1 FROM dominio.pago WHERE ID_pago = @ID_pago AND borrado = 0)
     BEGIN
-        RAISERROR('El pago no existe o ya está eliminado.', 16, 1);
+		RAISERROR('El pago %d no existe', 16, 1, @ID_pago);
         RETURN;
     END
-	IF EXISTS (SELECT 1 FROM dominio.pago
-        WHERE ID_pago = @ID_pago AND estado = 'Pagado')
+
+	IF EXISTS (SELECT 1 FROM dominio.pago WHERE ID_pago = @ID_pago AND estado = 'Pagado')
     BEGIN
-        RAISERROR('No se puede eliminar un pago con estado "Pagado".', 16, 1);
+        RAISERROR('No se puede eliminar el pago %d porque esta en estado "Pagado".', 16, 1, @ID_pago);
         RETURN;
     END
     UPDATE dominio.pago
-    SET activo = 0
+    SET borrado = 1,
+		fecha_borrado = GETDATE()
     WHERE ID_pago = @ID_pago;
 END;
 GO

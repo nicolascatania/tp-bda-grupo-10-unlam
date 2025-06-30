@@ -42,6 +42,7 @@ BEGIN
         EXEC sp_executesql @SqlBulk;
 
         INSERT INTO solNorte.socio (
+			ID_socio
             nombre, 
             apellido, 
             fecha_nacimiento, 
@@ -55,6 +56,7 @@ BEGIN
             borrado
         )
         SELECT
+			SUBSTRING(nro_socio, 4, LEN(nro_socio)),
             LEFT(LTRIM(RTRIM(nombre)), 20),
             LEFT(LTRIM(RTRIM(apellido)), 20),
             TRY_CONVERT(DATE, fecha_nacimiento, 103),  -- Formato dd/mm/aaaa
@@ -169,7 +171,7 @@ BEGIN
         -- Luego, insertar las asistencias
         INSERT INTO solNorte.asistencia (
             fecha,
-            presentismo,
+			presentismo,
             id_inscripcion_actividad,
             borrado
         )

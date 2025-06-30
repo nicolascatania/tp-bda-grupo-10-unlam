@@ -1,30 +1,7 @@
 USE Com2900G10;
 GO
 
---Tenemos que usar OPENROWSET para leer .xlsx
-EXEC sp_configure 'show advanced options', 1;
-RECONFIGURE;
-EXEC sp_configure 'Ad Hoc Distributed Queries', 1;
-RECONFIGURE;
-
-SELECT *
-INTO #temporal_ResponsablesDePago
-FROM OPENROWSET('Microsoft.ACE.OLEDB.12.0',
-    'Excel 12.0;Database=C:\Importaciones\Datos socios.xlsx;HDR=YES;IMEX=1',
-    'SELECT * FROM [Responsables De Pago$]');
-
-
---Ojo según como la tengan en sus pc locales, antes de hacer la entrega deberiamos hacer la ruta relativa, que tome como ráíz el directorio del proyecto
-DECLARE @RutaArchivoRespPago VARCHAR(255) = 'C:\Users\Nicolas\Desktop\tp-bda-grupo-10-unlam\importacion\Datos socios.xlsx';
-
--- Ejecutar con la ruta del archivo
-
-EXEC solNorte.sp_CargarSociosResponsables 
-    @RutaArchivo = @RutaArchivoRespPago;
-GO
-
-
-CREATE OR ALTER PROCEDURE solNorte.sp_CargarSociosResponsables
+CREATE OR ALTER PROCEDURE solNorte.CargarSociosResponsables
     @RutaArchivo VARCHAR(255)  
 AS
 BEGIN
@@ -88,7 +65,7 @@ BEGIN
             LEFT(REPLACE(REPLACE(telefono_emergencia, ' ', ''), '-', ''), 23),
             NULLIF(nombre_obra_social, ''),
             NULLIF(nro_obra_social, ''),
-            1,  -- Todos son responsables
+            1,  -- Todos son responsables por ahora, pero deberiamos ver bien segun los grupos familiares, es complicado pq necesitamos el socio para tener el grupo fliar y el grupo fliar para saber quen es responsable
             LEFT(LTRIM(RTRIM(mail)), 30),
             0   -- Valor por defecto para borrado
         FROM #temporal_ResponsablesDePago
@@ -113,4 +90,124 @@ BEGIN
         RETURN -1;
     END CATCH;
 END;
+GO
+
+
+
+
+-- Ejecutar con la ruta del archivo
+DECLARE @RutaArchivoRespPago VARCHAR(255) = 'C:\tp-bda-grupo-10-unlam\importacion\Datos socios.csv';
+
+EXEC solNorte.CargarSociosResponsables 
+    @RutaArchivo = @RutaArchivoRespPago;
+GO
+
+
+CREATE OR ALTER PROCEDURE solNorte.CargarPresentismo
+    @RutaArchivo VARCHAR(255)  
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    BEGIN TRY
+        IF OBJECT_ID('tempdb..#temporal_Presentismo') IS NOT NULL
+            DROP TABLE #temporal_Presentismo;
+
+        -- Tabla temporal con la estructura correcta del CSV
+        CREATE TABLE #temporal_Presentismo(
+            nro_socio_completo VARCHAR(10),
+            actividad VARCHAR(50),
+            fecha_asistencia VARCHAR(10),
+            presentismo CHAR(1),
+            profesor VARCHAR(50)
+        );
+
+        -- Cargar datos del archivo
+        DECLARE @SqlBulk NVARCHAR(MAX);
+        SET @SqlBulk = N'
+            BULK INSERT #temporal_Presentismo
+            FROM ''' + @RutaArchivo + '''
+            WITH (
+                FIELDTERMINATOR = ''\t'',
+                ROWTERMINATOR = ''\n'',
+                CODEPAGE = ''65001'',
+                FIRSTROW = 2,
+                ERRORFILE = ''' + @RutaArchivo + '.ERRORS.txt'' 
+            );';
+        
+        EXEC sp_executesql @SqlBulk;
+
+        -- Extraer solo el número de socio (eliminar "SN-")
+        UPDATE #temporal_Presentismo
+        SET nro_socio_completo = SUBSTRING(nro_socio_completo, 4, LEN(nro_socio_completo))
+        WHERE nro_socio_completo LIKE 'SN-%';
+
+        -- Primero, insertar inscripciones si no existen
+        INSERT INTO solNorte.inscripcion_actividad (
+            fecha_inscripcion,
+            id_actividad,
+            id_socio,
+            borrado
+        )
+        SELECT DISTINCT
+            MIN(TRY_CONVERT(DATE, P.fecha_asistencia, 103)), -- Primera fecha de asistencia como fecha de inscripción
+            A.ID_actividad,
+            S.ID_socio,
+            0
+        FROM #temporal_Presentismo P
+        INNER JOIN solNorte.socio S ON S.ID_socio = TRY_CAST(P.nro_socio_completo AS INT)
+        INNER JOIN solNorte.actividad A ON A.nombre = P.actividad
+        WHERE NOT EXISTS (
+            SELECT 1 
+            FROM solNorte.inscripcion_actividad IA 
+            WHERE IA.id_socio = S.ID_socio 
+            AND IA.id_actividad = A.ID_actividad
+            AND IA.borrado = 0
+        )
+        GROUP BY A.ID_actividad, S.ID_socio;
+
+        -- Luego, insertar las asistencias
+        INSERT INTO solNorte.asistencia (
+            fecha,
+            presentismo,
+            id_inscripcion_actividad,
+            borrado
+        )
+        SELECT
+            TRY_CONVERT(DATE, P.fecha_asistencia, 103),
+            UPPER(P.presentismo),
+            IA.ID_inscripcion,
+            0
+        FROM #temporal_Presentismo P
+        INNER JOIN solNorte.socio S ON S.ID_socio = TRY_CAST(P.nro_socio_completo AS INT)
+        INNER JOIN solNorte.actividad A ON A.nombre = P.actividad
+        INNER JOIN solNorte.inscripcion_actividad IA ON IA.id_socio = S.ID_socio 
+            AND IA.id_actividad = A.ID_actividad
+            AND IA.borrado = 0
+        WHERE NOT EXISTS (
+            SELECT 1 
+            FROM solNorte.asistencia ASIS 
+            WHERE ASIS.id_inscripcion_actividad = IA.ID_inscripcion
+            AND ASIS.fecha = TRY_CONVERT(DATE, P.fecha_asistencia, 103)
+            AND ASIS.borrado = 0
+        );
+
+        DROP TABLE #temporal_Presentismo;
+
+        PRINT 'Carga de presentismo completada exitosamente. Filas insertadas: ' + CAST(@@ROWCOUNT AS VARCHAR);
+        RETURN 1;
+    END TRY
+    BEGIN CATCH
+        PRINT 'Error al cargar presentismo: ' + ERROR_MESSAGE();
+        IF OBJECT_ID('tempdb..#temporal_Presentismo') IS NOT NULL
+            DROP TABLE #temporal_Presentismo;
+        RETURN 0;
+    END CATCH
+END;
+GO
+
+--Ojo según como la tengan en sus pc locales, antes de hacer la entrega deberiamos hacer la ruta relativa, que tome como ráíz el directorio del proyecto
+DECLARE @RutaArchivoPresentismo VARCHAR(255) = 'C:\tp-bda-grupo-10-unlam\importacion\presentismo.csv';
+EXEC solNorte.CargarSociosResponsables 
+    @RutaArchivo = @RutaArchivoPresentismo;
 GO

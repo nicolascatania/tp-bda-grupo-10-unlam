@@ -144,7 +144,7 @@ BEGIN
         SET nro_socio_completo = SUBSTRING(nro_socio_completo, 4, LEN(nro_socio_completo))
         WHERE nro_socio_completo LIKE 'SN-%';
 
-        -- Primero, insertar inscripciones si no existen
+        -- Primero, insertar inscripciones si no existen, agarramos los datos de la tabla temporal, matcheamos con tablas socio y actividad y llenamos la tabla asistencia e inscripcion_actividad de paso
         INSERT INTO solNorte.inscripcion_actividad (
             fecha_inscripcion,
             id_actividad,
@@ -152,7 +152,7 @@ BEGIN
             borrado
         )
         SELECT DISTINCT
-            MIN(TRY_CONVERT(DATE, P.fecha_asistencia, 103)), -- Primera fecha de asistencia como fecha de inscripción
+            MIN(TRY_CONVERT(DATE, P.fecha_asistencia, 103)), -- Primera fecha de asistencia como fecha de inscripción (asumimos eso directamente, porque sino deberiamos insertar registros manuales)
             A.ID_actividad,
             S.ID_socio,
             0
@@ -168,7 +168,7 @@ BEGIN
         )
         GROUP BY A.ID_actividad, S.ID_socio;
 
-        -- Luego, insertar las asistencias
+        -- acá es donde insertamos las asistencias, asi primero tenemos las inscripciones
         INSERT INTO solNorte.asistencia (
             fecha,
 			presentismo,

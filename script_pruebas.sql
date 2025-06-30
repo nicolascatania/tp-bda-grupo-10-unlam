@@ -776,7 +776,7 @@ GO
 BEGIN TRY
     EXEC dominio.borrar_asistencia @ID_asistencia = 999999;
     
-    PRINT 'Prueba 8: FALLA - Debió fallar por registro inexistente';
+    PRINT 'Falla por registro inexistente';
 END TRY
 BEGIN CATCH
     IF ERROR_MESSAGE() = 'El registro de asistencia no existe o ya está dado de baja.'
@@ -818,7 +818,7 @@ BEGIN TRY
     
     PRINT 'Estado DESPUÉS:';
     SELECT * FROM dominio.descuento WHERE id_detalle_factura = @ID_detalle1;
-    PRINT 'Prueba 1: ÉXITO - Descuento insertado correctamente';
+    PRINT 'Descuento insertado correctamente';
 END TRY
 BEGIN CATCH
     PRINT 'Prueba 1: FALLA - ' + ERROR_MESSAGE();
@@ -836,7 +836,7 @@ BEGIN TRY
     END TRY
 BEGIN CATCH
     IF ERROR_MESSAGE() = 'El detalle de factura especificado no existe'
-        PRINT 'Prueba 2: ÉXITO - Validación de detalle factura funcionó correctamente';
+        PRINT 'Validación de detalle factura funcionó correctamente';
     ELSE
         PRINT 'Prueba 2: FALLA - Mensaje de error inesperado: ' + ERROR_MESSAGE();
 END CATCH
@@ -860,7 +860,7 @@ BEGIN TRY
     
     PRINT 'Estado DESPUÉS:';
     SELECT * FROM dominio.descuento WHERE ID_descuento = @ID_descuento;
-    PRINT 'Prueba 3: ÉXITO - Descuento actualizado correctamente';
+    PRINT 'Descuento actualizado correctamente';
 END TRY
 BEGIN CATCH
     PRINT 'Prueba 3: FALLA - ' + ERROR_MESSAGE();
@@ -878,7 +878,7 @@ BEGIN TRY
     
     PRINT 'Estado DESPUÉS:';
     SELECT * FROM dominio.descuento WHERE ID_descuento = @ID_descuento;
-    PRINT 'Prueba 4: ÉXITO - Descuento actualizado parcialmente';
+    PRINT 'Descuento actualizado parcialmente';
 END TRY
 BEGIN CATCH
     PRINT 'Prueba 4: FALLA - ' + ERROR_MESSAGE();
@@ -905,7 +905,7 @@ BEGIN TRY
     SELECT * FROM dominio.descuento WHERE ID_descuento = @ID_descuento_borrar;
     
     IF NOT EXISTS (SELECT 1 FROM dominio.descuento WHERE ID_descuento = @ID_descuento_borrar)
-        PRINT 'Prueba 5: ÉXITO - Descuento eliminado correctamente';
+        PRINT 'Descuento eliminado correctamente';
     ELSE
         PRINT 'Prueba 5: FALLA - El descuento no fue eliminado';
 END TRY
@@ -922,7 +922,7 @@ BEGIN TRY
 END TRY
 BEGIN CATCH
     IF ERROR_MESSAGE() = 'El descuento especificado no existe'
-        PRINT 'Prueba 6: ÉXITO - Validación de descuento inexistente funcionó correctamente';
+        PRINT 'Validación de descuento inexistente funcionó correctamente';
     ELSE
         PRINT 'Prueba 6: FALLA - Mensaje de error inesperado: ' + ERROR_MESSAGE();
 END CATCH
@@ -933,22 +933,149 @@ GO
 
 -- PRUEBAS PARA dominio.insertar_deuda
 -- Prueba 1: Deuda válida
+--Inserto socio activo
+INSERT INTO solNorte.socio (nombre, apellido, dni, fecha_nacimiento, borrado)
+VALUES ('Lucas', 'Modric', '12345678', '1996-08-01', 0)
+
+--Inserto socio borrado
+INSERT INTO solNorte.socio (nombre, apellido, dni, fecha_nacimiento, borrado)
+VALUES ('Lucas', 'Rodriguez', '98765432', '1998-10-22', 1)
+
+INSERT INTO dominio.factura (fecha_emision, monto_total, borrado)
+VALUES (GETDATE(), 1000.00, 0), (GETDATE(), 2000.00, 0)
+
+DECLARE @id_factura_valida INT = (SELECT ID_factura FROM dominio.factura WHERE monto_total = 1000.00);
+DECLARE @id_factura_valida2 INT = (SELECT ID_factura FROM dominio.factura WHERE monto_total = 1000.00);
+
+DECLARE @id_socio_deuda INT = (SELECT ID_socio FROM dominio.socio WHERE dni = '12345678');
+DECLARE @id_socio_deuda2 INT = (SELECT ID_socio FROM dominio.socio WHERE dni = '98765432');
+
+BEGIN TRY 
+	EXECUTE solNorte.insertar_deuda
+		@recargo_por_vencimiento = 0.10,
+        @deuda_acumulada = 1500.00,
+        @fecha_readmision = DATEADD(DAY, 30, GETDATE()),
+        @id_factura = @id_factura_valida,
+        @id_socio = @id_socio_deuda;
+	PRINT 'Deuda correctamente insertada'
+END TRY
+
+--Prueba 2: Deuda Invalida. Factura no existe
 BEGIN TRY
-    PRINT 'Estado ANTES de la inserción:';
-    SELECT * FROM dominio.deuda WHERE id_factura = @ID_factura1;
-    
     EXEC dominio.insertar_deuda 
         @recargo_por_vencimiento = 0.10,
-        @deuda_acumulada = 5500.00,
-        @fecha_readmision = '2023-11-01',
-        @id_factura = @ID_factura1,
-        @id_socio = @ID_socio1;
-    
-    PRINT 'Estado DESPUÉS de la inserción:';
-    SELECT * FROM dominio.deuda WHERE id_factura = @ID_factura1;
-    PRINT 'Prueba 1: ÉXITO - Deuda válida registrada correctamente';
+        @deuda_acumulada = 1500.00,
+        @id_factura = 9999, 
+        @id_socio = @id_socio_deuda;
+	PRINT 'No se detecto la factura'
+END TRY
+
+--Prueba 3: Deuda Invalida. Socio borrado
+BEGIN TRY
+    EXEC dominio.insertar_deuda 
+        @recargo_por_vencimiento = 0.10,
+        @deuda_acumulada = 1500.00,
+        @id_factura = @id_factura_valida2, 
+        @id_socio = @id_socio_deuda2;
+	PRINT 'Socio borrado'
+END TRY
+
+-- Prueba 4: Deuda Inválida - Factura borrada
+-- Actualizo la factura como borrada
+UPDATE dominio.factura SET borrado = 1 WHERE ID_factura = @id_factura_valida2;
+
+BEGIN TRY
+    EXEC dominio.insertar_deuda 
+        @recargo_por_vencimiento = 0.10,
+        @deuda_acumulada = 1500.00,
+        @id_factura = @id_factura_valida2, 
+        @id_socio = @id_socio_deuda;
+    PRINT 'Factura borrada';
+END TRY
+
+-- Prueba 5: Deuda Invalida. Fecha readmisión anterior a actual
+BEGIN TRY
+    EXEC dominio.insertar_deuda 
+        @recargo_por_vencimiento = 0.10,
+        @deuda_acumulada = 1500.00,
+        @fecha_readmision = DATEADD(DAY, -5, GETDATE()),
+        @id_factura = @id_factura_valida,
+        @id_socio = @id_socio_deuda;
+    PRINT 'Error: No se detectó fecha readmisión inválida';
 END TRY
 BEGIN CATCH
-    PRINT 'Prueba 1: FALLA - ' + ERROR_MESSAGE();
+    PRINT 'Exito Prueba 5'  + ERROR_MESSAGE();
 END CATCH
-GO
+
+-- Prueba 6: Deuda Invalida. Deuda duplicada para misma factura
+BEGIN TRY
+    -- Primera inserción 
+    EXEC dominio.insertar_deuda 
+        @recargo_por_vencimiento = 0.10,
+        @deuda_acumulada = 1500.00,
+        @id_factura = @id_factura_valida,
+        @id_socio = @id_socio_deuda;
+    
+    -- Segunda inserción para misma factura (debería fallar)
+    EXEC dominio.insertar_deuda 
+        @recargo_por_vencimiento = 0.15,
+        @deuda_acumulada = 1600.00,
+        @id_factura = @id_factura_valida,
+        @id_socio = @id_socio_deuda;
+    
+    PRINT 'Error: No se detectó deuda duplicada';
+END TRY
+BEGIN CATCH
+    PRINT 'Éxito (Prueba 6): ' + ERROR_MESSAGE();
+END CATCH
+
+---- PRUEBAS PARA dominio.modificar_deuda
+-- Obtengo ID de deuda insertada
+DECLARE @id_deuda_valida INT = (SELECT ID_deuda FROM dominio.deuda WHERE id_factura = @id_factura_valida);
+
+-- Prueba 7: Modificación exitosa
+BEGIN TRY
+    EXEC dominio.modificar_deuda 
+        @ID_deuda = @id_deuda_valida,
+        @recargo_por_vencimiento = 0.20,
+        @deuda_acumulada = 1800.00,
+        @fecha_readmision = DATEADD(DAY, 45, GETDATE());
+    PRINT 'Deuda modificada correctamente';
+END TRY
+BEGIN CATCH
+    PRINT 'Error (Prueba 7): ' + ERROR_MESSAGE();
+END CATCH
+
+-- Prueba 8: Modificación inválida - Deuda no existe
+BEGIN TRY
+    EXEC dominio.modificar_deuda 
+        @ID_deuda = 99999,
+        @deuda_acumulada = 2000.00;
+    PRINT 'Error: No se detectó deuda inexistente';
+END TRY
+
+-- Prueba 9: Modificación inválida - Factura no existe
+BEGIN TRY
+    EXEC dominio.modificar_deuda 
+        @ID_deuda = @id_deuda_valida,
+        @id_factura = 99999;
+    PRINT 'Error: No se detectó factura inexistente';
+END TRY
+
+---- PRUEBAS PARA dominio.eliminar_deuda
+SELECT 1 FROM dominio.deuda WHERE ID_deuda = @id_deuda_valida
+BEGIN TRY
+    EXEC dominio.eliminar_deuda @ID_deuda = @id_deuda_valida;    
+    IF EXISTS (SELECT 1 FROM dominio.deuda WHERE ID_deuda = @id_deuda_valida AND borrado = 1)
+        PRINT 'Deuda marcada como borrada correctamente';
+    ELSE
+        PRINT 'Error: La deuda no se marcó como borrada';
+END TRY
+BEGIN CATCH
+    PRINT 'Error (Prueba 11): ' + ERROR_MESSAGE();
+END CATCH
+--Prueba borrar una deuda invalida
+BEGIN TRY 
+	EXEC solNorte.eliminar_deuda @ID_deuda = 99999999
+	PRINT 'No se encontro la deuda'
+END TRY

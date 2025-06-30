@@ -1431,7 +1431,6 @@ BEGIN
         WHERE ia.ID_inscripcion = @id_inscripcion_actividad
           AND ia.borrado = 0
           AND a.borrado = 0
-          AND @fecha BETWEEN ia.fecha_inscripcion AND ISNULL(a.fecha_fin, GETDATE())
     )
     BEGIN
         RAISERROR('La inscripción no existe, está inactiva o la fecha no está dentro del período válido.', 16, 1);

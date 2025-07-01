@@ -6,12 +6,12 @@ CREATE OR ALTER PROCEDURE solNorte.CargarSociosResponsables
 AS
 BEGIN
     SET NOCOUNT ON;
-    
+
     BEGIN TRY
         IF OBJECT_ID('tempdb..#temporal_ResponsablesDePago') IS NOT NULL
             DROP TABLE #temporal_ResponsablesDePago;
 
-        -- Usamos una tabla temporal para poder almacenar los datos, así luego procesarlos (filtrar, evitar duplicados y finalmente limpiar los datos)
+        -- Tabla temporal
         CREATE TABLE #temporal_ResponsablesDePago(
             nro_de_socio VARCHAR(10),
             nombre VARCHAR(20),
@@ -26,23 +26,28 @@ BEGIN
             telefono_contacto_emergencia VARCHAR(30)
         );
 
-		--acá tenemos que ver bien donde irá el txt con el log de errores
+        -- Cargar desde CSV
         DECLARE @SqlBulk NVARCHAR(MAX);
         SET @SqlBulk = N'
             BULK INSERT #temporal_ResponsablesDePago
             FROM ''' + @RutaArchivo + '''
             WITH (
-                FIELDTERMINATOR = '','',
+                FIELDTERMINATOR = '';'',
                 ROWTERMINATOR = ''\n'',
                 CODEPAGE = ''65001'',
-                FIRSTROW = 2,
-                ERRORFILE = ''' + @RutaArchivo + '.ERRORS.txt'' 
+                FIRSTROW = 2
             );';
-        
-        EXEC sp_executesql @SqlBulk;
 
+        EXEC sp_executesql @SqlBulk;
+		--test
+		SELECT * FROM #temporal_ResponsablesDePago;
+
+        -- Habilitamos IDENTITY_INSERT
+        SET IDENTITY_INSERT solNorte.socio ON;
+
+        -- Insertamos los datos con ID_socio manual (de nro_de_socio)
         INSERT INTO solNorte.socio (
-			ID_socio
+            ID_socio,
             nombre, 
             apellido, 
             fecha_nacimiento, 
@@ -56,44 +61,79 @@ BEGIN
             borrado
         )
         SELECT
-			SUBSTRING(nro_socio, 4, LEN(nro_socio)),
+            CAST(SUBSTRING(nro_de_socio, 4, LEN(nro_de_socio)) AS INT),
             LEFT(LTRIM(RTRIM(nombre)), 20),
             LEFT(LTRIM(RTRIM(apellido)), 20),
-            TRY_CONVERT(DATE, fecha_nacimiento, 103),  -- Formato dd/mm/aaaa
-            CASE WHEN DNI NOT LIKE '%[^0-9]%' 
-                 AND LEN(DNI) BETWEEN 7 AND 8 
-                 THEN CAST(DNI AS INT) END,
+            TRY_CONVERT(DATE, fecha_nacimiento, 103),
+            CASE 
+			WHEN DNI NOT LIKE '%[^0-9]%'
+			THEN CAST(SUBSTRING(DNI, 2, 8) AS INT) 
+			END,
             LEFT(REPLACE(REPLACE(telefono_contacto, ' ', ''), '-', ''), 10),
             LEFT(REPLACE(REPLACE(telefono_emergencia, ' ', ''), '-', ''), 23),
             NULLIF(nombre_obra_social, ''),
             NULLIF(nro_obra_social, ''),
-            1,  -- Todos son responsables por ahora, pero deberiamos ver bien segun los grupos familiares, es complicado pq necesitamos el socio para tener el grupo fliar y el grupo fliar para saber quen es responsable
+            1,
             LEFT(LTRIM(RTRIM(mail)), 30),
-            0   -- Valor por defecto para borrado
+            0
         FROM #temporal_ResponsablesDePago
-        WHERE DNI IS NOT NULL;
+        WHERE  
+		TRY_CAST(SUBSTRING(DNI, 2, 8) AS INT) IS NOT NULL
+		AND LEN(DNI) = 9
+		AND DNI NOT LIKE '%[^0-9]%'
+		AND TRY_CONVERT(DATE, fecha_nacimiento, 103) IS NOT NULL
 
-		-- Es buena práctica que nosotros limpiemos explícitamente la tabla temporal
+		--test
+		SELECT
+            CAST(SUBSTRING(nro_de_socio, 4, LEN(nro_de_socio)) AS INT),
+            LEFT(LTRIM(RTRIM(nombre)), 20),
+            LEFT(LTRIM(RTRIM(apellido)), 20),
+            TRY_CONVERT(DATE, fecha_nacimiento, 103),
+            CASE 
+			WHEN DNI NOT LIKE '%[^0-9]%'
+			THEN CAST(SUBSTRING(DNI, 2, 8) AS INT) 
+			END,
+            LEFT(REPLACE(REPLACE(telefono_contacto, ' ', ''), '-', ''), 10),
+            LEFT(REPLACE(REPLACE(telefono_emergencia, ' ', ''), '-', ''), 23),
+            NULLIF(nombre_obra_social, ''),
+            NULLIF(nro_obra_social, ''),
+            1,
+            LEFT(LTRIM(RTRIM(mail)), 30),
+            0
+        FROM #temporal_ResponsablesDePago
+
+
+        -- Deshabilitamos IDENTITY_INSERT
+        SET IDENTITY_INSERT solNorte.socio OFF;
+
+        -- Uso sql dinamico porque en la función de DBCC CHEKCIDENT no me deja pasarle el 3er parametro (ultimo id) como parámetro, debe ser un valor literal
+		DECLARE @UltimoID INT;
+		SELECT @UltimoID = MAX(CAST(SUBSTRING(nro_de_socio, 4, LEN(nro_de_socio)) AS INT))
+		FROM #temporal_ResponsablesDePago
+		WHERE DNI IS NOT NULL;
+
+		DECLARE @SqlReseed NVARCHAR(MAX);
+		SET @SqlReseed = 'DBCC CHECKIDENT (''solNorte.socio'', RESEED, ' + CAST(@UltimoID AS VARCHAR) + ');';
+		EXEC sp_executesql @SqlReseed;
+
+        -- Limpiar tabla temporal
         DROP TABLE #temporal_ResponsablesDePago;
 
-        PRINT 'Carga completada exitosamente. Filas insertadas: ' + CAST(@@ROWCOUNT AS VARCHAR);
-		RETURN 1;
+        PRINT 'Carga completada exitosamente. Último ID reseedeado a: ' + CAST(@UltimoID AS VARCHAR);
+        RETURN 1;
     END TRY
     BEGIN CATCH
-        -- Manejo de errores
         DECLARE @ErrorMessage NVARCHAR(4000) = ERROR_MESSAGE();
         DECLARE @ErrorSeverity INT = ERROR_SEVERITY();
-        
-        -- Limpiar temporal en caso de error
+
         IF OBJECT_ID('tempdb..#temporal_ResponsablesDePago') IS NOT NULL
             DROP TABLE #temporal_ResponsablesDePago;
-        
+
         RAISERROR('Error durante la carga: %s', @ErrorSeverity, 1, @ErrorMessage);
         RETURN -1;
     END CATCH;
 END;
 GO
-
 
 
 
@@ -103,6 +143,8 @@ DECLARE @RutaArchivoRespPago VARCHAR(255) = 'C:\tp-bda-grupo-10-unlam\importacio
 EXEC solNorte.CargarSociosResponsables 
     @RutaArchivo = @RutaArchivoRespPago;
 GO
+
+SELECT * FROM solNorte.socio;
 
 
 CREATE OR ALTER PROCEDURE solNorte.CargarPresentismo

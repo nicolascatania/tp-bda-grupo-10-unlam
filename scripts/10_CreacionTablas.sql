@@ -136,7 +136,7 @@ BEGIN
 		estado CHAR(9) CHECK(estado in ('PENDIENTE', 'PAGADA', 'VENCIDA')), --estado de mayor longitud PENDIENTE -> 9 caracteres, el otro es Pagada
 		importe_total DECIMAL(8,2) CHECK (importe_total > 0),
 		razon_social_emisor CHAR(20),
-		CUIT_emisor INT, 
+		CUIT_emisor BIGINT, 
 		vencimiento_CAE DATETIME,
 		id_socio INT,
 		anulada BIT NOT NULL DEFAULT 0,

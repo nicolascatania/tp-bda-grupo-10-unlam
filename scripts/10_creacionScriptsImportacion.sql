@@ -262,7 +262,9 @@ BEGIN
             nombre_responsable VARCHAR(20) NULL,
             apellido_responsable VARCHAR(20) NULL,
             DNI_responsable INT NULL,
-            email_responsable VARCHAR(50) NULL
+            email_responsable VARCHAR(50) NULL,
+			telefono_responsable VARCHAR(30),
+			fecha_nacimiento_responsable VARCHAR(30)
         );
 
         -- Cargar datos del archivo CSV
@@ -285,7 +287,9 @@ BEGIN
 			apellido_responsable = S.apellido,
 			DNI_responsable = S.DNI,
 			email_responsable = S.email,
-			nro_responsable = S.ID_socio
+			nro_responsable = S.ID_socio,
+			telefono_responsable = S.telefono,
+			fecha_nacimiento_responsable = S.fecha_nacimiento
 		FROM #temporal_GrupoFliar TF
 		INNER JOIN solNorte.socio S 
 			ON S.ID_socio = TRY_CAST(SUBSTRING(TF.nro_responsable, 4, LEN(TF.nro_responsable)) AS INT);
@@ -323,6 +327,7 @@ BEGIN
 			mail_responsable,
 			telefono_responsable,
 			fecha_nacimiento_responsable,
+			parentezco_con_responsable,
 			borrado
 		)
 		SELECT
@@ -396,3 +401,7 @@ EXEC solNorte.CargarSociosMenores
 GO
 
 
+
+
+
+SELECT * FROM solNorte.socio;

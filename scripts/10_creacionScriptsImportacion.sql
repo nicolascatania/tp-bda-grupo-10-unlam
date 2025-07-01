@@ -40,7 +40,7 @@ BEGIN
 
 		SELECT * FROM #temporal_ResponsablesDePago;
 
-        -- Habilitamos IDENTITY_INSERT
+        -- Habilitamos IDENTITY_INSERT para poder ignorar el autoincremental
         SET IDENTITY_INSERT solNorte.socio ON;
 
 		INSERT INTO solNorte.socio (
@@ -86,10 +86,11 @@ BEGIN
 			AND TRY_CONVERT(DATE, fecha_nacimiento, 103) IS NOT NULL;
 
 
-        -- Deshabilitamos IDENTITY_INSERT
+        -- Deshabilitamos IDENTITY_INSERT para que los proximos inserts vuelvan a ser incremental
         SET IDENTITY_INSERT solNorte.socio OFF;
 
-        -- Uso sql dinamico porque en la función de DBCC CHEKCIDENT no me deja pasarle el 3er parametro (ultimo id) como parámetro, debe ser un valor literal
+        -- Uso sql dinamico porque en la función de DBCC CHEKCIDENT no me deja pasarle el 3er parametro (ultimo id) como parámetro, debe ser un valor literal, para poder actualizar el último id sobre 
+		-- el que debe basarse la tabla para generar nuevos id
 		DECLARE @UltimoID INT;
 		SELECT @UltimoID = MAX(CAST(SUBSTRING(nro_de_socio, 4, LEN(nro_de_socio)) AS INT))
 		FROM #temporal_ResponsablesDePago
@@ -99,7 +100,7 @@ BEGIN
 		SET @SqlReseed = 'DBCC CHECKIDENT (''solNorte.socio'', RESEED, ' + CAST(@UltimoID AS VARCHAR) + ');';
 		EXEC sp_executesql @SqlReseed;
 
-        -- Limpiar tabla temporal
+        -- Limpiamos la tabla temporal de manera manual, buena práctica
         DROP TABLE #temporal_ResponsablesDePago;
 
         PRINT 'Carga completada exitosamente. Último ID reseedeado a: ' + CAST(@UltimoID AS VARCHAR);

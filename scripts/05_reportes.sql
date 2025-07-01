@@ -155,7 +155,7 @@ BEGIN
 	INNER JOIN solNorte.socio s ON ia.id_socio = s.ID_socio
 	INNER JOIN solNorte.actividad a ON ia.id_actividad = a.ID_actividad
 	-- aca hay que usar el campo presentismo
-	WHERE asistio = 0
+	WHERE asi.presentismo = 'A'
 		AND asi.borrado = 0
 		AND s.borrado = 0
 		AND a.borrado = 0
@@ -191,7 +191,7 @@ BEGIN
     INNER JOIN solNorte.inscripcion_actividad ia ON asi.id_inscripcion_actividad = ia.ID_inscripcion
     INNER JOIN solNorte.socio s ON ia.id_socio = s.ID_socio
     INNER JOIN solNorte.actividad a ON ia.id_actividad = a.ID_actividad
-    WHERE asi.asistio = 0
+    WHERE asi.presentismo = 'A'
         AND asi.borrado = 0
         AND s.borrado = 0
         AND a.borrado = 0

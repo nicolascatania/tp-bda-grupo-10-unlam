@@ -1,10 +1,83 @@
--- Entrega 7
 /*
-	Asignar los roles correspondientes segun el area
+====================================================================================
+ Archivo		: RquisitosSeguridad.sql
+ Proyecto		: Institución Deportiva Sol Norte.
+ Descripción	: Scripts para protección de datos sensibles de los empleados registrados en la base de datos.
+ Autor			: G10
+ Fecha entrega	: 2025-07-01
+====================================================================================
 */
-
 USE Com2900G10;
 GO
+
+EXEC sp_configure 'remote access'
+-- SELECT name from sys.sql_logins	
+
+
+--	Se crean los usuarios para los desarrolladores.
+IF NOT EXISTS (SELECT * FROM sys.sql_logins WHERE name = 'leonel')
+BEGIN
+    CREATE LOGIN leonel
+    WITH PASSWORD = 'leonel',
+         DEFAULT_DATABASE = Com2900G10,
+         CHECK_POLICY = OFF,
+         CHECK_EXPIRATION = OFF;
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.sql_logins WHERE name = 'nicolas')
+BEGIN
+    CREATE LOGIN nicolas
+    WITH PASSWORD = 'nicolas',
+         DEFAULT_DATABASE = Com2900G10,
+         CHECK_POLICY = OFF,
+         CHECK_EXPIRATION = OFF;
+END
+GO
+
+
+IF NOT EXISTS (SELECT * FROM sys.sql_logins WHERE name = 'iara')
+BEGIN
+    CREATE LOGIN iara
+    WITH PASSWORD = 'iara',
+         DEFAULT_DATABASE = Com2900G10,
+         CHECK_POLICY = OFF,
+         CHECK_EXPIRATION = OFF;
+END
+GO
+
+
+IF NOT EXISTS (SELECT * FROM sys.sql_logins WHERE name = 'ignacio')
+BEGIN
+    CREATE LOGIN ignacio
+    WITH PASSWORD = 'ignacio',
+         DEFAULT_DATABASE = Com2900G10,
+         CHECK_POLICY = OFF,
+         CHECK_EXPIRATION = OFF;
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.database_principals WHERE name = 'leonel')
+    CREATE USER leonel FOR LOGIN leonel;
+
+IF NOT EXISTS (SELECT * FROM sys.database_principals WHERE name = 'nicolas')
+    CREATE USER nicolas FOR LOGIN nicolas;
+
+IF NOT EXISTS (SELECT * FROM sys.database_principals WHERE name = 'iara')
+    CREATE USER iara FOR LOGIN iara;
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.database_principals WHERE name = 'ignacio')
+    CREATE USER ignacio FOR LOGIN ignacio;
+GO
+
+ALTER ROLE db_owner ADD MEMBER leonel
+ALTER ROLE db_owner ADD MEMBER nicolas
+ALTER ROLE db_owner ADD MEMBER iara
+ALTER ROLE db_owner ADD MEMBER ignacio
+GO
+
+----------------------------------------------------------------------------------------------------------------
 
 --Creacion de Logins y usuarios
 CREATE LOGIN jefe_tesoreria WITH PASSWORD = 'T3s0r3r!@2025' MUST_CHANGE, CHECK_POLICY = ON, CHECK_EXPIRATION = ON;
@@ -126,37 +199,113 @@ GRANT SELECT ON solNorte.factura TO rol_secretario, rol_vocales;
 GO
 
 
---------------ENCRIPTACION--------------
+--======================================Encriptacion======================================--
 
--- Agregamos un campo para cada dato cifrado
-ALTER TABLE solNorte.socio
-ADD 
-    dni_encrypt VARBINARY(256),
-    direccion_encrypt VARBINARY(256),
-    telefono_encrypt VARBINARY(256),
-    email_encrypt VARBINARY(256);
+IF NOT EXISTS (
+    SELECT * FROM sys.objects 
+    WHERE object_id = OBJECT_ID(N'personal.Empleado') AND type = N'U'
+)
+BEGIN
+    CREATE TABLE personal.Empleado (
+        id_empleado INT PRIMARY KEY,
+        nombre VARBINARY(MAX),
+        apellido VARBINARY(MAX),
+        dni VARBINARY(MAX),
+        direccion VARBINARY(MAX),
+        cuil VARBINARY(MAX),
+        email_personal VARBINARY(MAX),
+        email_empresarial VARCHAR(255),
+        turno VARCHAR(50),
+        rol VARCHAR(50),
+        area VARCHAR(50)
+    );
+    PRINT 'Tabla Empleado creada correctamente.';
+END
+ELSE
+BEGIN
+    PRINT 'La tabla Empleado ya existe.';
+END;
 GO
 
--- Para DNI
-DECLARE @FraseClaveDNI NVARCHAR(128) = 'ClaveSeguraDNI123!';
-UPDATE solNorte.socio
-SET dni_encrypt = EncryptByPassPhrase(@FraseClaveDNI, dni, 1, CONVERT(varbinary, id_socio));
+CREATE OR ALTER PROCEDURE personal.alta_empleado_encriptado
+    @id_empleado INT,
+    @nombre VARCHAR(100),
+    @apellido VARCHAR(100),
+    @dni INT,
+    @direccion VARCHAR(255),
+    @cuil VARCHAR(200),
+    @email_personal VARCHAR(255),
+    @email_empresarial VARCHAR(255),
+    @turno VARCHAR(50),
+    @rol VARCHAR(50),
+    @area VARCHAR(50)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @passphrase NVARCHAR(128) = 'S0lN0rt3#2025!'; 
+
+    INSERT INTO personal.Empleado (
+        id_empleado,
+        nombre,
+        apellido,
+        dni,
+        direccion,
+        cuil,
+        email_personal,
+        email_empresarial,
+        turno,
+        rol,
+        area
+    )
+    VALUES (
+        @id_empleado,
+        ENCRYPTBYPASSPHRASE(@passphrase, @nombre),
+        ENCRYPTBYPASSPHRASE(@passphrase, @apellido),
+        ENCRYPTBYPASSPHRASE(@passphrase, CAST(@dni AS VARCHAR(20))),
+        ENCRYPTBYPASSPHRASE(@passphrase, @direccion),
+        ENCRYPTBYPASSPHRASE(@passphrase, @cuil),
+        ENCRYPTBYPASSPHRASE(@passphrase, @email_personal),
+        @email_empresarial,
+        @turno,
+        @rol,
+        @area
+    );
+
+    PRINT 'Empleado registrado con datos encriptados usando passphrase.';
+END;
 GO
 
--- Para dirección
-DECLARE @FraseClaveDireccion NVARCHAR(128) = 'ClaveSeguraDireccion456!';
-UPDATE solNorte.socio
-SET direccion_encrypt = EncryptByPassPhrase(@FraseClaveDireccion, direccion, 1, CONVERT(varbinary, id_socio));
-GO
 
--- Para teléfono
-DECLARE @FraseClaveTelefono NVARCHAR(128) = 'ClaveSeguraTelefono789!';
-UPDATE solNorte.socio
-SET telefono_encrypt = EncryptByPassPhrase(@FraseClaveTelefono, telefono, 1, CONVERT(varbinary, id_socio));
-GO
 
--- Para email
-DECLARE @FraseClaveEmail NVARCHAR(128) = 'ClaveSeguraEmail012!';
-UPDATE solNorte.socio
-SET email_encrypt = EncryptByPassPhrase(@FraseClaveEmail, email, 1, CONVERT(varbinary, id_socio));
-GO
+--ejecutar el SP para insertar un empleado
+EXEC personal.alta_empleado_encriptado
+    @id_empleado = 101,
+    @nombre = 'Martín',
+    @apellido = 'Pereyra',
+    @dni = 34890123,
+    @direccion = 'Av. San Martín 1234',
+    @cuil = '20-34890123-9',
+    @email_personal = 'martin.p@gmail.com',
+    @email_empresarial = 'mpereyra@solnorte.com.ar',
+    @turno = 'Mañana',
+    @rol = 'Administrativo',
+    @area = 'Tesoreria';
+
+
+
+DECLARE @passphrase NVARCHAR(128) = 'S0lN0rt3#2025!';
+
+SELECT
+    id_empleado,
+    CONVERT(VARCHAR(100), DECRYPTBYPASSPHRASE(@passphrase, nombre)) AS nombre,
+    CONVERT(VARCHAR(100), DECRYPTBYPASSPHRASE(@passphrase, apellido)) AS apellido,
+    CAST(CONVERT(VARCHAR(20), DECRYPTBYPASSPHRASE(@passphrase, dni)) AS INT) AS dni,
+    CONVERT(VARCHAR(255), DECRYPTBYPASSPHRASE(@passphrase, direccion)) AS direccion,
+    CONVERT(VARCHAR(200), DECRYPTBYPASSPHRASE(@passphrase, cuil)) AS cuil,
+    CONVERT(VARCHAR(255), DECRYPTBYPASSPHRASE(@passphrase, email_personal)) AS email_personal,
+    email_empresarial,
+    turno,
+    rol,
+    area
+FROM personal.Empleado;

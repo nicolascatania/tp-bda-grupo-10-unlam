@@ -11,7 +11,6 @@ BEGIN
         IF OBJECT_ID('tempdb..#temporal_ResponsablesDePago') IS NOT NULL
             DROP TABLE #temporal_ResponsablesDePago;
 
-        -- Tabla temporal
         CREATE TABLE #temporal_ResponsablesDePago(
             nro_de_socio VARCHAR(10),
             nombre VARCHAR(20),
@@ -26,7 +25,6 @@ BEGIN
             telefono_contacto_emergencia VARCHAR(30)
         );
 
-        -- Cargar desde CSV
         DECLARE @SqlBulk NVARCHAR(MAX);
         SET @SqlBulk = N'
             BULK INSERT #temporal_ResponsablesDePago
@@ -39,68 +37,53 @@ BEGIN
             );';
 
         EXEC sp_executesql @SqlBulk;
-		--test
+
 		SELECT * FROM #temporal_ResponsablesDePago;
 
         -- Habilitamos IDENTITY_INSERT
         SET IDENTITY_INSERT solNorte.socio ON;
 
-        -- Insertamos los datos con ID_socio manual (de nro_de_socio)
-        INSERT INTO solNorte.socio (
-            ID_socio,
-            nombre, 
-            apellido, 
-            fecha_nacimiento, 
-            DNI, 
-            telefono, 
-            telefono_de_emergencia,
-            obra_social,
-            nro_obra_social,
-            es_responsable, 
-            email,
-            borrado
-        )
-        SELECT
-            CAST(SUBSTRING(nro_de_socio, 4, LEN(nro_de_socio)) AS INT),
-            LEFT(LTRIM(RTRIM(nombre)), 20),
-            LEFT(LTRIM(RTRIM(apellido)), 20),
-            TRY_CONVERT(DATE, fecha_nacimiento, 103),
-            CASE 
-			WHEN DNI NOT LIKE '%[^0-9]%'
-			THEN CAST(SUBSTRING(DNI, 2, 8) AS INT) 
-			END,
-            LEFT(REPLACE(REPLACE(telefono_contacto, ' ', ''), '-', ''), 10),
-            LEFT(REPLACE(REPLACE(telefono_emergencia, ' ', ''), '-', ''), 23),
-            NULLIF(nombre_obra_social, ''),
-            NULLIF(nro_obra_social, ''),
-            1,
-            LEFT(LTRIM(RTRIM(mail)), 30),
-            0
-        FROM #temporal_ResponsablesDePago
-        WHERE  
-		TRY_CAST(SUBSTRING(DNI, 2, 8) AS INT) IS NOT NULL
-		AND LEN(DNI) = 9
-		AND DNI NOT LIKE '%[^0-9]%'
-		AND TRY_CONVERT(DATE, fecha_nacimiento, 103) IS NOT NULL
-
-		--test
+		INSERT INTO solNorte.socio (
+			ID_socio,
+			nombre, 
+			apellido, 
+			fecha_nacimiento, 
+			DNI, 
+			telefono, 
+			telefono_de_emergencia,
+			obra_social,
+			nro_obra_social,
+			categoria_socio,     
+			es_responsable, 
+			email,
+			borrado
+		)
 		SELECT
-            CAST(SUBSTRING(nro_de_socio, 4, LEN(nro_de_socio)) AS INT),
-            LEFT(LTRIM(RTRIM(nombre)), 20),
-            LEFT(LTRIM(RTRIM(apellido)), 20),
-            TRY_CONVERT(DATE, fecha_nacimiento, 103),
-            CASE 
-			WHEN DNI NOT LIKE '%[^0-9]%'
-			THEN CAST(SUBSTRING(DNI, 2, 8) AS INT) 
+			CAST(SUBSTRING(nro_de_socio, 4, LEN(nro_de_socio)) AS INT),
+			LTRIM(RTRIM(LEFT(nombre, 20))),
+			LTRIM(RTRIM(LEFT(apellido, 20))),
+			TRY_CONVERT(DATE, fecha_nacimiento, 103),
+			CASE 
+				WHEN DNI NOT LIKE '%[^0-9]%' THEN CAST(SUBSTRING(DNI, 2, 8) AS INT) 
 			END,
-            LEFT(REPLACE(REPLACE(telefono_contacto, ' ', ''), '-', ''), 10),
-            LEFT(REPLACE(REPLACE(telefono_emergencia, ' ', ''), '-', ''), 23),
-            NULLIF(nombre_obra_social, ''),
-            NULLIF(nro_obra_social, ''),
-            1,
-            LEFT(LTRIM(RTRIM(mail)), 30),
-            0
-        FROM #temporal_ResponsablesDePago
+			LTRIM(RTRIM(LEFT(REPLACE(REPLACE(telefono_contacto, ' ', ''), '-', ''), 10))),
+			LTRIM(RTRIM(LEFT(REPLACE(REPLACE(telefono_emergencia, ' ', ''), '-', ''), 23))),
+			NULLIF(LTRIM(RTRIM(nombre_obra_social)), ''),
+			NULLIF(LTRIM(RTRIM(nro_obra_social)), ''),
+			CASE
+				WHEN DATEDIFF(YEAR, TRY_CONVERT(DATE, fecha_nacimiento, 103), GETDATE()) < 13 THEN 'Menor'
+				WHEN DATEDIFF(YEAR, TRY_CONVERT(DATE, fecha_nacimiento, 103), GETDATE()) < 18 THEN 'Cadete'
+				ELSE 'Mayor'
+			END,
+			0,
+			LTRIM(RTRIM(LEFT(mail, 30))),
+			0
+		FROM #temporal_ResponsablesDePago
+		WHERE  
+			TRY_CAST(SUBSTRING(DNI, 2, 8) AS INT) IS NOT NULL
+			AND LEN(DNI) = 9
+			AND DNI NOT LIKE '%[^0-9]%'
+			AND TRY_CONVERT(DATE, fecha_nacimiento, 103) IS NOT NULL;
 
 
         -- Deshabilitamos IDENTITY_INSERT
@@ -145,6 +128,7 @@ EXEC solNorte.CargarSociosResponsables
 GO
 
 SELECT * FROM solNorte.socio;
+DELETE FROM solNorte.socio;
 
 
 CREATE OR ALTER PROCEDURE solNorte.CargarPresentismo

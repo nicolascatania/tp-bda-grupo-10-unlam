@@ -35,3 +35,21 @@ BEGIN
 END
 
 GO
+
+
+IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = 'rep')
+BEGIN
+    DECLARE @sql NVARCHAR(MAX);
+    SET @sql = 'CREATE SCHEMA rep';
+    EXEC sp_executesql @sql;
+END;
+GO
+
+
+IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = 'personal')
+BEGIN
+    DECLARE @sql NVARCHAR(MAX);
+    SET @sql = 'CREATE SCHEMA personal';
+    EXEC sp_executesql @sql;
+END;
+GO

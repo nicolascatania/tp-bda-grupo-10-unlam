@@ -112,105 +112,84 @@ IF NOT EXISTS (SELECT * FROM sys.database_principals WHERE name = 'Vocales' AND 
 ----------------------------------------------
 -- ROL: Jefe_Tesoreria
 ----------------------------------------------
-GRANT EXECUTE ON OBJECT::insertarPago			TO Jefe_Tesoreria;
-GRANT EXECUTE ON OBJECT::modificarPago			TO Jefe_Tesoreria;
-GRANT EXECUTE ON OBJECT::borrarPago				TO Jefe_Tesoreria;
-GRANT EXECUTE ON OBJECT::insertarReembolso		TO Jefe_Tesoreria;
-GRANT EXECUTE ON OBJECT::modificarReembolso		TO Jefe_Tesoreria;
-GRANT EXECUTE ON OBJECT::borrarReembolso		TO Jefe_Tesoreria;
+GRANT EXECUTE ON OBJECT::solNorte.insertar_pago				TO Jefe_Tesoreria;
+GRANT EXECUTE ON OBJECT::solNorte.modificar_pago			TO Jefe_Tesoreria;
+GRANT EXECUTE ON OBJECT::solNorte.eliminar_pago				TO Jefe_Tesoreria;
+GRANT EXECUTE ON OBJECT::solNorte.alta_reembolso			TO Jefe_Tesoreria;
+
 
 ----------------------------------------------
 -- ROL: Administrativo_Cobranza
 ----------------------------------------------
-GRANT EXECUTE ON OBJECT::insertarPago			TO Administrativo_Cobranza;
-GRANT EXECUTE ON OBJECT::modificarPago			TO Administrativo_Cobranza;
-GRANT EXECUTE ON OBJECT::insertarReembolso		TO Administrativo_Cobranza;
-GRANT EXECUTE ON OBJECT::modificarReembolso		TO Administrativo_Cobranza;
+GRANT EXECUTE ON OBJECT::solNorte.insertar_pago				TO Administrativo_Cobranza;
+GRANT EXECUTE ON OBJECT::solNorte.modificar_pago			TO Administrativo_Cobranza;
+GRANT EXECUTE ON OBJECT::solNorte.alta_reembolso			TO Administrativo_Cobranza;
 
 ----------------------------------------------
 -- ROL: Administrativo_Morosidad
 ----------------------------------------------
-GRANT EXECUTE ON OBJECT::emitirFactura			TO Administrativo_Morosidad;
-GRANT EXECUTE ON OBJECT::modificarFactura		TO Administrativo_Morosidad;
+GRANT EXECUTE ON OBJECT::emitirFactura						TO Administrativo_Morosidad;
+GRANT EXECUTE ON OBJECT::modificarFactura					TO Administrativo_Morosidad;
 
 ----------------------------------------------
 -- ROL: Administrativo_Facturacion
 ----------------------------------------------
-GRANT EXECUTE ON OBJECT::emitirFactura			TO Administrativo_Facturacion;
-GRANT EXECUTE ON OBJECT::modificarFactura		TO Administrativo_Facturacion;
-GRANT EXECUTE ON OBJECT::borrarFactura			TO Administrativo_Facturacion;
-GRANT EXECUTE ON OBJECT::insertarItem_factura	TO Administrativo_Facturacion;
-GRANT EXECUTE ON OBJECT::modificarItem_factura	TO Administrativo_Facturacion;
-GRANT EXECUTE ON OBJECT::borrarItem_factura		TO Administrativo_Facturacion;
+GRANT EXECUTE ON OBJECT::solNorte.insertar_factura			TO Administrativo_Facturacion;
+GRANT EXECUTE ON OBJECT::solNorte.anular_factura			TO Administrativo_Facturacion;
+GRANT EXECUTE ON OBJECT::solNorte.insertar_detalle_factura	TO Administrativo_Facturacion;
+GRANT EXECUTE ON OBJECT::modificar_detalle_factura			TO Administrativo_Facturacion;
+GRANT EXECUTE ON OBJECT::eliminar_detalle_factura			TO Administrativo_Facturacion;
 
 ----------------------------------------------
 -- ROL: Administrativo_Socio
 ----------------------------------------------
-GRANT EXECUTE ON OBJECT::insertarSocio			TO Administrativo_Socio;
-GRANT EXECUTE ON OBJECT::modificarSocio			TO Administrativo_Socio;
-GRANT EXECUTE ON OBJECT::borrarSocio			TO Administrativo_Socio;
+GRANT EXECUTE ON OBJECT::solNorte.alta_socio				TO Administrativo_Socio;
+GRANT EXECUTE ON OBJECT::solNorte.modificar_socio			TO Administrativo_Socio;
+GRANT EXECUTE ON OBJECT::solNorte.baja_socio				TO Administrativo_Socio;
 
-GRANT EXECUTE ON OBJECT::insertarInvitado		TO Administrativo_Socio;
-GRANT EXECUTE ON OBJECT::modificarInvitado		TO Administrativo_Socio;
-GRANT EXECUTE ON OBJECT::borrarInvitado			TO Administrativo_Socio;
+GRANT EXECUTE ON OBJECT::solNorte.alta_grupo_familiar		TO Administrativo_Socio;
+GRANT EXECUTE ON OBJECT::solNorte.modificar_grupo_familiar	TO Administrativo_Socio;
+GRANT EXECUTE ON OBJECT::solNorte.baja_grupo_familiar		TO Administrativo_Socio;
 
-GRANT EXECUTE ON OBJECT::insertarSuscripcion	TO Administrativo_Socio;
-GRANT EXECUTE ON OBJECT::modificarSuscripcion	TO Administrativo_Socio;
-GRANT EXECUTE ON OBJECT::borrarSuscripcion		TO Administrativo_Socio;
-
-GRANT EXECUTE ON OBJECT::insertarResponsable	TO Administrativo_Socio;
-GRANT EXECUTE ON OBJECT::modificarResponsable	TO Administrativo_Socio;
-GRANT EXECUTE ON OBJECT::borrarResponsable		TO Administrativo_Socio;
-
-GRANT EXECUTE ON OBJECT::insertarCategoria		TO Administrativo_Socio;
-GRANT EXECUTE ON OBJECT::modificarCategoria		TO Administrativo_Socio;
-GRANT EXECUTE ON OBJECT::borrarCategoria		TO Administrativo_Socio;
-
-GRANT EXECUTE ON OBJECT::insertarActividad		TO Administrativo_Socio;
-GRANT EXECUTE ON OBJECT::modificarActividad		TO Administrativo_Socio;
-GRANT EXECUTE ON OBJECT::eliminarActividad		TO Administrativo_Socio;
+GRANT EXECUTE ON OBJECT::solNorte.insertar_actividad		TO Administrativo_Socio;
+GRANT EXECUTE ON OBJECT::solNorte.modificar_actividad		TO Administrativo_Socio;
+GRANT EXECUTE ON OBJECT::solNorte.borrar_actividad			TO Administrativo_Socio;
 
 ----------------------------------------------
 -- ROL: Socio_Web
 ----------------------------------------------
-GRANT EXECUTE ON OBJECT::insertarReserva
-
+--consultar pagos
+--consultar asistencia
+--consultar 
 ----------------------------------------------
 -- ROL: Presidente
 ----------------------------------------------
-GRANT EXECUTE ON SCHEMA::solNorte						TO Presidente;
-GRANT EXECUTE ON SCHEMA::personal						TO Presidente;
+GRANT EXECUTE ON SCHEMA::solNorte							TO Presidente;
+GRANT EXECUTE ON SCHEMA::personal							TO Presidente;
 
 ----------------------------------------------
 -- ROL: Vicepresidente
 ----------------------------------------------
-GRANT EXECUTE ON SCHEMA::solNorte						TO Presidente;
-GRANT EXECUTE ON SCHEMA::personal						TO Presidente;
+GRANT EXECUTE ON SCHEMA::solNorte							TO Presidente;
+GRANT EXECUTE ON SCHEMA::personal							TO Presidente;
 
 ----------------------------------------------
 -- ROL: Secretario
 ----------------------------------------------
-GRANT EXECUTE ON SCHEMA::Rep						TO Secretario;
+GRANT EXECUTE ON SCHEMA::Rep								TO Secretario;
 
-GRANT EXECUTE ON OBJECT::emitirFactura			TO Secretario;
-GRANT EXECUTE ON OBJECT::insertarItem_factura	TO Secretario;
+GRANT EXECUTE ON OBJECT::solNorte.insertar_factura			TO Secretario;
+GRANT EXECUTE ON OBJECT::solNorte.anular_factura			TO Secretario;
 
-GRANT EXECUTE ON OBJECT::insertarSocio			TO Secretario;
-GRANT EXECUTE ON OBJECT::modificarSocio			TO Secretario;
+GRANT EXECUTE ON OBJECT::solNorte.alta_socio				TO Secretario;
+GRANT EXECUTE ON OBJECT::solNorte.modificar_socio			TO Secretario;
 
-GRANT EXECUTE ON OBJECT::insertarInvitado		TO Secretario;
-GRANT EXECUTE ON OBJECT::modificarInvitado		TO Secretario;
+GRANT EXECUTE ON OBJECT::solNorte.alta_grupo_familiar		TO Secretario;
+GRANT EXECUTE ON OBJECT::solNorte.modificar_grupo_familiar	TO Secretario;
 
-GRANT EXECUTE ON OBJECT::insertarResponsable	TO Secretario;
-GRANT EXECUTE ON OBJECT::modificarCategoria		TO Secretario;
-
-GRANT EXECUTE ON OBJECT::insertarCategoria		TO Secretario;
-GRANT EXECUTE ON OBJECT::modificarCategoria		TO Secretario;
-GRANT EXECUTE ON OBJECT::borrarCategoria		TO Secretario;
-
-GRANT EXECUTE ON OBJECT::insertarActividad		TO Secretario;
-GRANT EXECUTE ON OBJECT::modificarActividad		TO Secretario;
-GRANT EXECUTE ON OBJECT::eliminarActividad		TO Secretario;
+GRANT EXECUTE ON OBJECT::solNorte.insertar_actividad		TO Secretario;
+GRANT EXECUTE ON OBJECT::solNorte.modificar_actividad		TO Secretario;
+GRANT EXECUTE ON OBJECT::solNorte.borrar_actividad			TO Secretario;
 
 ----------------------------------------------
 -- ROL: Vocales

@@ -273,7 +273,7 @@ BEGIN
             BULK INSERT #temporal_GrupoFliar
             FROM ''' + @RutaArchivo + '''
             WITH (
-                FIELDTERMINATOR = '','',
+                FIELDTERMINATOR = '';'',
                 ROWTERMINATOR = ''\n'',
                 CODEPAGE = ''65001'',
                 FIRSTROW = 2
@@ -364,6 +364,8 @@ BEGIN
 			AND TRY_CONVERT(DATE, fecha_nacimiento, 103) IS NOT NULL;
 
 
+		SELECT * FROM #temporal_GrupoFliar;
+
         SET IDENTITY_INSERT solNorte.socio OFF;
 
         -- Reseed de IDENTITY
@@ -399,9 +401,6 @@ DECLARE @RutaArchivoSociosMenores VARCHAR(255) = 'C:\tp-bda-grupo-10-unlam\impor
 EXEC solNorte.CargarSociosMenores 
     @RutaArchivo = @RutaArchivoSociosMenores;
 GO
-
-
-
 
 
 SELECT * FROM solNorte.socio;

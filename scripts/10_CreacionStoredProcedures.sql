@@ -1462,5 +1462,93 @@ BEGIN
 	
 	RETURN 1;
 END
+GO
 
 --=====================================================DEUDA=====================================================--
+CREATE OR ALTER PROCEDURE solNorte.insertar_deudas
+	@recargo_por_vencimiento DECIMAL(3,2),
+    @deuda_acumulada DECIMAL(10,2),
+    @fecha_readmision DATE = NULL,
+    @id_factura INT,
+    @id_socio INT
+AS
+BEGIN
+    -- Validar que la factura exista
+    IF NOT EXISTS (SELECT 1 FROM solNorte.factura WHERE ID_factura = @id_factura)
+    BEGIN
+        RAISERROR('La factura especificada no existe.', 16, 1);
+        RETURN;
+    END
+
+    -- Validar que el socio exista
+    IF NOT EXISTS (SELECT 1 FROM solNorte.socio WHERE ID_socio = @id_socio)
+    BEGIN
+        RAISERROR('El socio especificado no existe.', 16, 1);
+        RETURN;
+    END
+    INSERT INTO solNorte.deuda (
+        @recargo_por_vencimiento,
+		@deuda_acumulada,
+		@fecha_readmision,
+		@id_factura,
+        @id_socio
+    );
+END;
+GO
+
+CREATE OR ALTER PROCEDURE solNorte.modificar_deuda
+    @ID_deuda INT,
+    @recargo_por_vencimiento DECIMAL(3,2) = NULL,
+    @deuda_acumulada DECIMAL(10,2) = NULL,
+    @fecha_readmision DATE = NULL,
+    @id_factura INT = NULL,
+    @id_socio INT = NULL
+AS
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM solNorte.deuda WHERE ID_deuda = @ID_deuda)
+    BEGIN
+        RAISERROR('La deuda especificada no existe.', 16, 1);
+        RETURN;
+    END
+    
+    IF @id_factura IS NOT NULL AND 
+       NOT EXISTS (SELECT 1 FROM solNorte.factura WHERE ID_factura = @id_factura)
+    BEGIN
+        RAISERROR('La factura especificada no existe.', 16, 1);
+        RETURN;
+    END
+    
+    IF @id_socio IS NOT NULL AND 
+       NOT EXISTS (SELECT 1 FROM solNorte.socio WHERE ID_socio = @id_socio)
+    BEGIN
+        RAISERROR('El socio especificado no existe.', 16, 1);
+        RETURN;
+    END    
+    
+     -- Actualizar solo los campos proporcionados
+    UPDATE solNorte.deuda
+    SET 
+        recargo_por_vencimiento = ISNULL(@recargo_por_vencimiento, recargo_por_vencimiento),
+        deuda_acumulada = ISNULL(@deuda_acumulada, deuda_acumulada),
+        fecha_readmision = ISNULL(@fecha_readmision, fecha_readmision),
+        id_factura = ISNULL(@id_factura, id_factura),
+        id_socio = ISNULL(@id_socio, id_socio)
+    WHERE 
+        ID_deuda = @ID_deuda;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE solNorte.eliminar_deuda
+    @ID_deuda INT
+AS
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM solNorte.deuda WHERE ID_deuda = @ID_deuda)
+        BEGIN
+            RAISERROR('La deuda especificada no existe.', 16,1)
+            RETURN;
+        END
+
+    DELETE FROM solNorte.deuda 
+    WHERE ID_deuda = @ID_deuda;
+END; 
+GO

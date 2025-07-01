@@ -120,4 +120,3 @@ SELECT
     rol,
     area
 FROM personal.Empleado;
-

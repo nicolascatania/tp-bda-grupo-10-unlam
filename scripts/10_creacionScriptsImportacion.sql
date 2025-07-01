@@ -38,8 +38,6 @@ BEGIN
 
         EXEC sp_executesql @SqlBulk;
 
-		SELECT * FROM #temporal_ResponsablesDePago;
-
         -- Habilitamos IDENTITY_INSERT para poder ignorar el autoincremental
         SET IDENTITY_INSERT solNorte.socio ON;
 
@@ -128,10 +126,6 @@ EXEC solNorte.CargarSociosResponsables
     @RutaArchivo = @RutaArchivoRespPago;
 GO
 
-SELECT * FROM solNorte.socio;
-DELETE FROM solNorte.socio;
-
-
 CREATE OR ALTER PROCEDURE solNorte.CargarPresentismo
     @RutaArchivo VARCHAR(255)  
 AS
@@ -157,11 +151,10 @@ BEGIN
             BULK INSERT #temporal_Presentismo
             FROM ''' + @RutaArchivo + '''
             WITH (
-                FIELDTERMINATOR = ''\t'',
+                FIELDTERMINATOR = '';'',
                 ROWTERMINATOR = ''\n'',
                 CODEPAGE = ''65001'',
-                FIRSTROW = 2,
-                ERRORFILE = ''' + @RutaArchivo + '.ERRORS.txt'' 
+                FIRSTROW = 2
             );';
         
         EXEC sp_executesql @SqlBulk;
@@ -240,3 +233,166 @@ DECLARE @RutaArchivoPresentismo VARCHAR(255) = 'C:\tp-bda-grupo-10-unlam\importa
 EXEC solNorte.CargarSociosResponsables 
     @RutaArchivo = @RutaArchivoPresentismo;
 GO
+
+CREATE OR ALTER PROCEDURE solNorte.CargarSociosMenores
+    @RutaArchivo VARCHAR(255)  
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    BEGIN TRY
+        IF OBJECT_ID('tempdb..#temporal_GrupoFliar') IS NOT NULL
+            DROP TABLE #temporal_GrupoFliar;
+
+        CREATE TABLE #temporal_GrupoFliar(
+            nro_de_socio VARCHAR(10),
+            nro_responsable VARCHAR(10),
+            nombre VARCHAR(20),
+            apellido VARCHAR(20),
+            DNI VARCHAR(10),
+            mail VARCHAR(50),
+            fecha_nacimiento VARCHAR(10),
+            telefono_contacto VARCHAR(20),
+            telefono_emergencia VARCHAR(20),
+            nombre_obra_social VARCHAR(20),
+            nro_obra_social VARCHAR(20),
+            telefono_contacto_emergencia VARCHAR(30),
+
+            -- Campos extra para datos del responsable
+            nombre_responsable VARCHAR(20) NULL,
+            apellido_responsable VARCHAR(20) NULL,
+            DNI_responsable INT NULL,
+            email_responsable VARCHAR(50) NULL
+        );
+
+        -- Cargar datos del archivo CSV
+        DECLARE @SqlBulk NVARCHAR(MAX);
+        SET @SqlBulk = N'
+            BULK INSERT #temporal_GrupoFliar
+            FROM ''' + @RutaArchivo + '''
+            WITH (
+                FIELDTERMINATOR = '','',
+                ROWTERMINATOR = ''\n'',
+                CODEPAGE = ''65001'',
+                FIRSTROW = 2
+            );';
+        EXEC sp_executesql @SqlBulk;
+
+        -- Enriquecer con datos del socio responsable
+		UPDATE TF
+		SET 
+			nombre_responsable = S.nombre,
+			apellido_responsable = S.apellido,
+			DNI_responsable = S.DNI,
+			email_responsable = S.email,
+			nro_responsable = S.ID_socio
+		FROM #temporal_GrupoFliar TF
+		INNER JOIN solNorte.socio S 
+			ON S.ID_socio = TRY_CAST(SUBSTRING(TF.nro_responsable, 4, LEN(TF.nro_responsable)) AS INT);
+
+
+        -- Marcar responsables como tales
+        UPDATE S
+        SET es_responsable = 1
+        FROM solNorte.socio S
+        WHERE S.ID_socio IN (
+            SELECT DISTINCT CAST(SUBSTRING(nro_responsable, 4, LEN(nro_responsable)) AS INT)
+            FROM #temporal_GrupoFliar
+        );
+
+        -- Insertar menores con todos los datos
+        SET IDENTITY_INSERT solNorte.socio ON;
+
+        INSERT INTO solNorte.socio (
+			ID_socio,
+			nombre, 
+			apellido, 
+			fecha_nacimiento, 
+			DNI, 
+			telefono, 
+			telefono_de_emergencia,
+			obra_social,
+			nro_obra_social,
+			categoria_socio,     
+			es_responsable, 
+			email,
+			id_responsable_a_cargo,
+			nombre_responsable,
+			apellido_responsable,
+			DNI_responsable,
+			mail_responsable,
+			telefono_responsable,
+			fecha_nacimiento_responsable,
+			borrado
+		)
+		SELECT
+			TRY_CAST(SUBSTRING(nro_de_socio, 4, LEN(nro_de_socio)) AS INT),
+			LTRIM(RTRIM(LEFT(nombre, 20))),
+			LTRIM(RTRIM(LEFT(apellido, 20))),
+			TRY_CONVERT(DATE, fecha_nacimiento, 103),
+			TRY_CAST(DNI AS INT),
+			LTRIM(RTRIM(LEFT(REPLACE(REPLACE(telefono_contacto, ' ', ''), '-', ''), 10))),
+			LTRIM(RTRIM(LEFT(REPLACE(REPLACE(telefono_emergencia, ' ', ''), '-', ''), 23))),
+			NULLIF(LTRIM(RTRIM(nombre_obra_social)), ''),
+			NULLIF(LTRIM(RTRIM(nro_obra_social)), ''),
+			CASE
+				WHEN DATEDIFF(YEAR, TRY_CONVERT(DATE, fecha_nacimiento, 103), GETDATE()) < 13 THEN 'Menor'
+				WHEN DATEDIFF(YEAR, TRY_CONVERT(DATE, fecha_nacimiento, 103), GETDATE()) < 18 THEN 'Cadete'
+				ELSE 'Mayor'
+			END,
+			0,
+			LTRIM(RTRIM(LEFT(mail, 30))),
+			TRY_CAST(SUBSTRING(nro_responsable, 4, LEN(nro_responsable)) AS INT),
+			nombre_responsable,
+			apellido_responsable,
+			DNI_responsable,
+			email_responsable,
+			telefono_responsable,
+			fecha_nacimiento_responsable,
+			' ',
+			0
+		FROM #temporal_GrupoFliar
+		WHERE  
+			TRY_CAST(SUBSTRING(nro_de_socio, 4, LEN(nro_de_socio)) AS INT) IS NOT NULL
+			AND TRY_CAST(SUBSTRING(nro_responsable, 4, LEN(nro_responsable)) AS INT) IS NOT NULL
+			AND TRY_CAST(DNI AS INT) IS NOT NULL
+			AND TRY_CONVERT(DATE, fecha_nacimiento, 103) IS NOT NULL;
+
+
+        SET IDENTITY_INSERT solNorte.socio OFF;
+
+        -- Reseed de IDENTITY
+        DECLARE @UltimoID INT;
+        SELECT @UltimoID = MAX(CAST(SUBSTRING(nro_de_socio, 4, LEN(nro_de_socio)) AS INT))
+        FROM #temporal_GrupoFliar
+        WHERE DNI IS NOT NULL;
+
+        DECLARE @SqlReseed NVARCHAR(MAX);
+        SET @SqlReseed = 'DBCC CHECKIDENT (''solNorte.socio'', RESEED, ' + CAST(@UltimoID AS VARCHAR) + ');';
+        EXEC sp_executesql @SqlReseed;
+
+        DROP TABLE #temporal_GrupoFliar;
+
+        PRINT 'Carga de menores completada exitosamente. Último ID reseedeado a: ' + CAST(@UltimoID AS VARCHAR);
+        RETURN 1;
+    END TRY
+    BEGIN CATCH
+        DECLARE @ErrorMessage NVARCHAR(4000) = ERROR_MESSAGE();
+        DECLARE @ErrorSeverity INT = ERROR_SEVERITY();
+
+        IF OBJECT_ID('tempdb..#temporal_GrupoFliar') IS NOT NULL
+            DROP TABLE #temporal_GrupoFliar;
+
+        RAISERROR('Error durante la carga: %s', @ErrorSeverity, 1, @ErrorMessage);
+        RETURN -1;
+    END CATCH;
+END;
+GO
+
+--Ojo según como la tengan en sus pc locales, antes de hacer la entrega deberiamos hacer la ruta relativa, que tome como ráíz el directorio del proyecto
+DECLARE @RutaArchivoSociosMenores VARCHAR(255) = 'C:\tp-bda-grupo-10-unlam\importacion\Grupo Familiar.csv';
+EXEC solNorte.CargarSociosMenores 
+    @RutaArchivo = @RutaArchivoSociosMenores;
+GO
+
+

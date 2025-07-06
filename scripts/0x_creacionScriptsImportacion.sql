@@ -202,7 +202,7 @@ BEGIN
             0
         FROM #temporal_Presentismo P
         INNER JOIN solNorte.socio S ON S.ID_socio = TRY_CAST(P.nro_socio_completo AS INT)
-        INNER JOIN solNorte.actividad A ON A.nombre = P.actividad
+        INNER JOIN solNorte.actividad A ON A.nombre_actividad = P.actividad
         INNER JOIN solNorte.inscripcion_actividad IA ON IA.id_socio = S.ID_socio 
             AND IA.id_actividad = A.ID_actividad
             AND IA.borrado = 0

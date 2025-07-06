@@ -821,7 +821,7 @@ END;
 GO
 
 -- Borra una inscripcion a una actividad
-CREATE PROCEDURE solNorte.borrar_inscripcion_actividad
+CREATE OR ALTER PROCEDURE solNorte.borrar_inscripcion_actividad
     @ID_inscripcion INT
 AS
 BEGIN
@@ -857,34 +857,35 @@ BEGIN
         RETURN;
     END
 
-	IF EXISTS(
-		SELECT 1
-		FROM solNorte.asistencia
-		WHERE id_inscripcion_actividad = @id_inscripcion_actividad
-			AND fecha = @fecha
-			AND borrado = 0
-	)
-	BEGIN
-		RAISERROR ('Ya existe un registro de asistencia para esta inscripción en la fecha especificada', 16, 1);
-		RETURN
+    IF EXISTS(
+        SELECT 1
+        FROM solNorte.asistencia
+        WHERE id_inscripcion_actividad = @id_inscripcion_actividad
+            AND fecha = @fecha
+            AND borrado = 0
+    )
+    BEGIN
+        RAISERROR('Ya existe un registro de asistencia para esta inscripción en la fecha especificada', 16, 1);
+        RETURN;
 	END
 
-    -- Insertar la asistencia
-    INSERT INTO solNorte.asistencia (fecha, asistio, id_inscripcion_actividad)
-    VALUES (@fecha, @asistio, @id_inscripcion_actividad);
+    INSERT INTO solNorte.asistencia (fecha, presentismo, id_inscripcion_actividad)
+    VALUES (@fecha, UPPER(@asistio), @id_inscripcion_actividad);
 
-	DECLARE @id INT = SCOPE_IDENTITY();
+    DECLARE @id INT = SCOPE_IDENTITY();
 
-    PRINT FORMATMESSAGE('Asistencia registrada correctamente. ID: %d, fecha: %s, asistio %s', @id, @fecha, @asistio);
+    DECLARE @fechaStr VARCHAR(10) = CONVERT(VARCHAR(10), @fecha, 103); -- Formato dd/mm/yyyy
+    PRINT 'Asistencia registrada correctamente. ID: ' + CAST(@id AS VARCHAR) + 
+          ', fecha: ' + @fechaStr + 
+          ', asistio: ' + UPPER(@asistio);
 END;
 GO
-
 
 -- Modifica un registro de asistencia
 CREATE OR ALTER PROCEDURE solNorte.modificar_asistencia
     @ID_asistencia INT,
     @fecha DATE = NULL,
-    @asistio BIT = NULL,
+    @asistio CHAR(1) = NULL,
     @id_inscripcion_actividad INT = NULL
 AS
 BEGIN
@@ -900,7 +901,7 @@ BEGIN
     -- Actualizar solo los campos provistos
     UPDATE solNorte.asistencia
     SET fecha = COALESCE(@fecha, fecha),
-        asistio = COALESCE(@asistio, asistio),
+        presentismo = COALESCE(@asistio, presentismo),
         id_inscripcion_actividad = COALESCE(@id_inscripcion_actividad, id_inscripcion_actividad)
     WHERE ID_asistencia = @ID_asistencia;
 
@@ -909,7 +910,7 @@ END;
 GO
 
 --Borrar un registro de asistencia 
-CREATE PROCEDURE solNorte.borrar_asistencia
+CREATE OR ALTER PROCEDURE solNorte.borrar_asistencia
     @ID_asistencia INT
 AS 
 BEGIN
@@ -1121,7 +1122,7 @@ BEGIN
 END;
 GO
 
-CREATE PROCEDURE eliminar_detalle_factura -- eliminado logico
+CREATE OR ALTER PROCEDURE eliminar_detalle_factura -- eliminado logico
     @ID_detalle_factura INT
 AS
 BEGIN
@@ -1466,33 +1467,47 @@ GO
 
 --=====================================================DEUDA=====================================================--
 CREATE OR ALTER PROCEDURE solNorte.insertar_deudas
-	@recargo_por_vencimiento DECIMAL(3,2),
+    @recargo_por_vencimiento DECIMAL(3,2),
     @deuda_acumulada DECIMAL(10,2),
     @fecha_readmision DATE = NULL,
     @id_factura INT,
     @id_socio INT
 AS
 BEGIN
-    -- Validar que la factura exista
+    SET NOCOUNT ON;
+    
     IF NOT EXISTS (SELECT 1 FROM solNorte.factura WHERE ID_factura = @id_factura)
     BEGIN
         RAISERROR('La factura especificada no existe.', 16, 1);
-        RETURN;
+        RETURN -1;
     END
 
-    -- Validar que el socio exista
+
     IF NOT EXISTS (SELECT 1 FROM solNorte.socio WHERE ID_socio = @id_socio)
     BEGIN
         RAISERROR('El socio especificado no existe.', 16, 1);
-        RETURN;
+        RETURN -1;
     END
+    
     INSERT INTO solNorte.deuda (
+        recargo_por_vencimiento,
+        deuda_acumulada,
+        fecha_readmision,
+        id_factura,
+        id_socio
+    )
+    VALUES (
         @recargo_por_vencimiento,
-		@deuda_acumulada,
-		@fecha_readmision,
-		@id_factura,
+        @deuda_acumulada,
+        @fecha_readmision,
+        @id_factura,
         @id_socio
     );
+    
+    DECLARE @idDeuda INT = SCOPE_IDENTITY();
+    PRINT 'Deuda registrada correctamente. ID: ' + CAST(@idDeuda AS VARCHAR);
+    
+    RETURN 1;
 END;
 GO
 

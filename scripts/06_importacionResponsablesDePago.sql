@@ -11,6 +11,44 @@ RECONFIGURE;
 USE Com2900G10;
 GO
 
+CREATE OR ALTER PROCEDURE solNorte.CargarActividades
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    BEGIN TRY
+        -- Insertar solo actividades que no existen todavía (por nombre_actividad)
+        INSERT INTO solNorte.actividad (nombre_actividad, costo_mensual)
+        SELECT nombre_actividad, costo_mensual
+        FROM (
+            VALUES 
+                ('FUTSAL', 25000),
+                ('VOLEY', 30000),
+                ('TAEKWONDO', 25000),
+                ('BAILE ARTISTICO', 30000),
+                ('NATACION', 45000),
+                ('AJEDREZ', 2000)
+        ) AS base(nombre_actividad, costo_mensual)
+        WHERE NOT EXISTS (
+            SELECT 1 
+            FROM solNorte.actividad a
+            WHERE a.nombre_actividad = base.nombre_actividad
+        );
+
+        PRINT 'Actividades cargadas correctamente.';
+        RETURN 1;
+    END TRY
+    BEGIN CATCH
+        PRINT 'Error al cargar actividades: ' + ERROR_MESSAGE();
+        RETURN 0;
+    END CATCH
+END;
+GO
+
+EXEC solNorte.CargarActividades
+GO
+
+
 CREATE OR ALTER PROCEDURE solNorte.CargarSociosResponsables
     @RutaArchivo VARCHAR(255),
     @NombreHoja VARCHAR(255)

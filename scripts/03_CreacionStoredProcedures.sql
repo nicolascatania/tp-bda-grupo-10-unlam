@@ -821,7 +821,7 @@ END;
 GO
 
 -- Borra una inscripcion a una actividad
-CREATE PROCEDURE solNorte.borrar_inscripcion_actividad
+CREATE OR ALTER PROCEDURE solNorte.borrar_inscripcion_actividad
     @ID_inscripcion INT
 AS
 BEGIN
@@ -835,7 +835,7 @@ GO
 --Inserta un registro de asistencia 
 CREATE OR ALTER PROCEDURE solNorte.insertar_asistencia
     @fecha DATE,
-    @asistio CHAR(1),
+    @presentismo CHAR(1),
     @id_inscripcion_actividad INT = NULL
 AS
 BEGIN
@@ -870,12 +870,12 @@ BEGIN
 	END
 
     -- Insertar la asistencia
-    INSERT INTO solNorte.asistencia (fecha, asistio, id_inscripcion_actividad)
-    VALUES (@fecha, @asistio, @id_inscripcion_actividad);
+    INSERT INTO solNorte.asistencia (fecha, presentismo, id_inscripcion_actividad)
+    VALUES (@fecha, @presentismo, @id_inscripcion_actividad);
 
 	DECLARE @id INT = SCOPE_IDENTITY();
 
-    PRINT FORMATMESSAGE('Asistencia registrada correctamente. ID: %d, fecha: %s, asistio %s', @id, @fecha, @asistio);
+    PRINT FORMATMESSAGE('Asistencia registrada correctamente. ID: %d, fecha: %s, asistio %s', @id, CAST(@fecha AS VARCHAR(10)), @presentismo);
 END;
 GO
 
@@ -900,7 +900,7 @@ BEGIN
     -- Actualizar solo los campos provistos
     UPDATE solNorte.asistencia
     SET fecha = COALESCE(@fecha, fecha),
-        asistio = COALESCE(@asistio, asistio),
+        presentismo = COALESCE(@asistio, presentismo),
         id_inscripcion_actividad = COALESCE(@id_inscripcion_actividad, id_inscripcion_actividad)
     WHERE ID_asistencia = @ID_asistencia;
 
@@ -909,7 +909,7 @@ END;
 GO
 
 --Borrar un registro de asistencia 
-CREATE PROCEDURE solNorte.borrar_asistencia
+CREATE OR ALTER PROCEDURE solNorte.borrar_asistencia
     @ID_asistencia INT
 AS 
 BEGIN
@@ -1121,7 +1121,7 @@ BEGIN
 END;
 GO
 
-CREATE PROCEDURE eliminar_detalle_factura -- eliminado logico
+CREATE OR ALTER PROCEDURE eliminar_detalle_factura -- eliminado logico
     @ID_detalle_factura INT
 AS
 BEGIN
@@ -1486,13 +1486,20 @@ BEGIN
         RAISERROR('El socio especificado no existe.', 16, 1);
         RETURN;
     END
-    INSERT INTO solNorte.deuda (
-        @recargo_por_vencimiento,
+    INSERT INTO solNorte.deuda(
+        recargo_por_vencimiento,
+		deuda_acumulada,
+		fecha_readmision,
+		id_factura,
+        id_socio
+    )
+	VALUES (
+		@recargo_por_vencimiento,
 		@deuda_acumulada,
 		@fecha_readmision,
 		@id_factura,
         @id_socio
-    );
+	);
 END;
 GO
 

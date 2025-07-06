@@ -116,15 +116,56 @@ BEGIN
     END CATCH;
 END;
 GO
-
-
-
 -- Ejecutar con la ruta del archivo
 DECLARE @RutaArchivoRespPago VARCHAR(255) = 'C:\tp-bda-grupo-10-unlam\importacion\Datos socios.csv';
 
 EXEC solNorte.CargarSociosResponsables 
     @RutaArchivo = @RutaArchivoRespPago;
 GO
+
+
+
+
+--SELECT * FROM solNorte.actividad
+
+CREATE OR ALTER PROCEDURE solNorte.CargarActividades
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    BEGIN TRY
+        -- Insertar solo actividades que no existen todavía (por nombre_actividad)
+        INSERT INTO solNorte.actividad (nombre_actividad, costo_mensual)
+        SELECT nombre_actividad, costo_mensual
+        FROM (
+            VALUES 
+                ('FUTSAL', 25000),
+                ('VOLEY', 30000),
+                ('TAEKWONDO', 25000),
+                ('BAILEARTISTICO', 30000),
+                ('NATACION', 45000),
+                ('AJEDREZ', 2000)
+        ) AS base(nombre_actividad, costo_mensual)
+        WHERE NOT EXISTS (
+            SELECT 1 
+            FROM solNorte.actividad a
+            WHERE a.nombre_actividad = base.nombre_actividad
+        );
+
+        PRINT 'Actividades cargadas correctamente.';
+        RETURN 1;
+    END TRY
+    BEGIN CATCH
+        PRINT 'Error al cargar actividades: ' + ERROR_MESSAGE();
+        RETURN 0;
+    END CATCH
+END;
+GO
+
+EXEC solNorte.CargarActividades
+GO
+
+
 
 CREATE OR ALTER PROCEDURE solNorte.CargarPresentismo
     @RutaArchivo VARCHAR(255)  
@@ -141,7 +182,7 @@ BEGIN
             nro_socio_completo VARCHAR(10),
             actividad VARCHAR(50),
             fecha_asistencia VARCHAR(10),
-            presentismo CHAR(1),
+            presentismo VARCHAR(10),
             profesor VARCHAR(50)
         );
 
@@ -159,80 +200,98 @@ BEGIN
         
         EXEC sp_executesql @SqlBulk;
 
-        -- Extraer solo el número de socio (eliminar "SN-")
+        UPDATE #temporal_Presentismo
+        SET 
+            nro_socio_completo = LTRIM(RTRIM(nro_socio_completo)),
+            actividad = UPPER(LTRIM(RTRIM(actividad))),
+            fecha_asistencia = LTRIM(RTRIM(fecha_asistencia)),
+            presentismo = UPPER(LTRIM(RTRIM(presentismo))),
+            profesor = LTRIM(RTRIM(profesor));
+
+        -- Normalizar número de socio (quita "SN-")
         UPDATE #temporal_Presentismo
         SET nro_socio_completo = SUBSTRING(nro_socio_completo, 4, LEN(nro_socio_completo))
         WHERE nro_socio_completo LIKE 'SN-%';
 
-        -- Primero, insertar inscripciones si no existen, agarramos los datos de la tabla temporal, matcheamos con tablas socio y actividad y llenamos la tabla asistencia e inscripcion_actividad de paso
-        INSERT INTO solNorte.inscripcion_actividad (
-            fecha_inscripcion,
-            id_actividad,
-            id_socio,
-            borrado
-        )
-        SELECT DISTINCT
-            MIN(TRY_CONVERT(DATE, P.fecha_asistencia, 103)), -- Primera fecha de asistencia como fecha de inscripción (asumimos eso directamente, porque sino deberiamos insertar registros manuales)
-            A.ID_actividad,
-            S.ID_socio,
-            0
-        FROM #temporal_Presentismo P
-        INNER JOIN solNorte.socio S ON S.ID_socio = TRY_CAST(P.nro_socio_completo AS INT)
-        INNER JOIN solNorte.actividad A ON A.nombre = P.actividad
-        WHERE NOT EXISTS (
-            SELECT 1 
-            FROM solNorte.inscripcion_actividad IA 
-            WHERE IA.id_socio = S.ID_socio 
-            AND IA.id_actividad = A.ID_actividad
-            AND IA.borrado = 0
-        )
-        GROUP BY A.ID_actividad, S.ID_socio;
+        -- Filtrar registros válidos con JOIN a socio y actividad
+   IF OBJECT_ID('tempdb..#RegistrosValidos') IS NOT NULL DROP TABLE #RegistrosValidos;
 
-        -- acá es donde insertamos las asistencias, asi primero tenemos las inscripciones
-        INSERT INTO solNorte.asistencia (
-            fecha,
-			presentismo,
-            id_inscripcion_actividad,
-            borrado
-        )
-        SELECT
-            TRY_CONVERT(DATE, P.fecha_asistencia, 103),
-            UPPER(P.presentismo),
-            IA.ID_inscripcion,
+        SELECT 
+            t.*,
+            s.ID_socio,
+            a.ID_actividad,
+            TRY_CONVERT(DATE, t.fecha_asistencia, 103) AS fecha
+        INTO #RegistrosValidos
+        FROM #temporal_Presentismo t
+        INNER JOIN solNorte.socio s ON s.ID_socio = TRY_CAST(t.nro_socio_completo AS INT)
+        INNER JOIN solNorte.actividad a 
+            ON a.nombre_actividad COLLATE Modern_Spanish_CI_AI = t.actividad COLLATE Modern_Spanish_CI_AI
+        WHERE TRY_CONVERT(DATE, t.fecha_asistencia, 103) IS NOT NULL
+          AND t.presentismo IN ('P', 'A', 'J');
+
+        -- Insertar inscripciones si no existen
+        INSERT INTO solNorte.inscripcion_actividad (fecha_inscripcion, id_actividad, id_socio, borrado)
+        SELECT DISTINCT
+            MIN(rv.fecha),
+            rv.ID_actividad,
+            rv.ID_socio,
             0
-        FROM #temporal_Presentismo P
-        INNER JOIN solNorte.socio S ON S.ID_socio = TRY_CAST(P.nro_socio_completo AS INT)
-        INNER JOIN solNorte.actividad A ON A.nombre = P.actividad
-        INNER JOIN solNorte.inscripcion_actividad IA ON IA.id_socio = S.ID_socio 
-            AND IA.id_actividad = A.ID_actividad
-            AND IA.borrado = 0
+        FROM #RegistrosValidos rv
+        LEFT JOIN solNorte.inscripcion_actividad ia 
+            ON ia.id_socio = rv.ID_socio AND ia.id_actividad = rv.ID_actividad AND ia.borrado = 0
+        WHERE ia.ID_inscripcion IS NULL
+        GROUP BY rv.ID_actividad, rv.ID_socio;
+
+        -- Insertar asistencias válidas
+        INSERT INTO solNorte.asistencia (fecha, presentismo, id_inscripcion_actividad, borrado)
+        SELECT
+            rv.fecha,
+            rv.presentismo,
+            ia.ID_inscripcion,
+            0
+        FROM #RegistrosValidos rv
+        INNER JOIN solNorte.inscripcion_actividad ia 
+            ON ia.id_socio = rv.ID_socio AND ia.id_actividad = rv.ID_actividad AND ia.borrado = 0
         WHERE NOT EXISTS (
-            SELECT 1 
-            FROM solNorte.asistencia ASIS 
-            WHERE ASIS.id_inscripcion_actividad = IA.ID_inscripcion
-            AND ASIS.fecha = TRY_CONVERT(DATE, P.fecha_asistencia, 103)
-            AND ASIS.borrado = 0
+            SELECT 1
+            FROM solNorte.asistencia a
+            WHERE a.fecha = rv.fecha
+              AND a.id_inscripcion_actividad = ia.ID_inscripcion
+              AND a.borrado = 0
         );
 
         DROP TABLE #temporal_Presentismo;
+        DROP TABLE #RegistrosValidos;
 
-        PRINT 'Carga de presentismo completada exitosamente. Filas insertadas: ' + CAST(@@ROWCOUNT AS VARCHAR);
+        PRINT 'Carga completada con éxito.';
         RETURN 1;
+
     END TRY
     BEGIN CATCH
-        PRINT 'Error al cargar presentismo: ' + ERROR_MESSAGE();
-        IF OBJECT_ID('tempdb..#temporal_Presentismo') IS NOT NULL
-            DROP TABLE #temporal_Presentismo;
+        PRINT 'Error en la carga: ' + ERROR_MESSAGE();
+        IF OBJECT_ID('tempdb..#temporal_Presentismo') IS NOT NULL DROP TABLE #temporal_Presentismo;
+        IF OBJECT_ID('tempdb..#RegistrosValidos') IS NOT NULL DROP TABLE #RegistrosValidos;
         RETURN 0;
     END CATCH
 END;
 GO
 
+
 --Ojo según como la tengan en sus pc locales, antes de hacer la entrega deberiamos hacer la ruta relativa, que tome como ráíz el directorio del proyecto
 DECLARE @RutaArchivoPresentismo VARCHAR(255) = 'C:\tp-bda-grupo-10-unlam\importacion\presentismo.csv';
-EXEC solNorte.CargarSociosResponsables 
+EXEC solNorte.CargarPresentismo
     @RutaArchivo = @RutaArchivoPresentismo;
 GO
+
+SELECT TOP 10 *
+FROM solNorte.inscripcion_actividad
+ORDER BY fecha_inscripcion DESC;
+
+SELECT TOP 10 *
+FROM solNorte.asistencia
+
+GO
+
 
 CREATE OR ALTER PROCEDURE solNorte.CargarSociosMenores
     @RutaArchivo VARCHAR(255)  

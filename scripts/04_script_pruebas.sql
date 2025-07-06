@@ -59,7 +59,7 @@ EXEC solNorte.modificar_socio
     @email = 'pedronuevo@mail.com';
 
 --socio no existe
-EXEC solNorte.modificar_socio @ID_socio = 999, @nombre = 'Juan', ... ;
+EXEC solNorte.modificar_socio @ID_socio = 999, @nombre = 'Juan';
 
 --2. CAMBIO GRUPO FAMILIAR
 --creo grupo origen

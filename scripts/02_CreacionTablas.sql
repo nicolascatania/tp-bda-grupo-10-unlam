@@ -58,25 +58,6 @@ BEGIN
 END
 GO
 
---para la hoja responsables de pago (socios mayores)
-CREATE TABLE #temporal_ResponsablesDePago(
-	nro_de_socio VARCHAR(10),
-	nombre VARCHAR(20),
-	apellido VARCHAR(20),
-	DNI VARCHAR(10),
-	mail VARCHAR(50),
-	fecha_nacimiento VARCHAR(10),
-	telefono_contacto VARCHAR(20),
-	telefono_emergencia VARCHAR(20),
-	nombre_obra_social VARCHAR(20),
-	nro_obra_social VARCHAR(20),
-	telefono_contacto_emergencia VARCHAR(30)
-
-);
-GO
-
-
-
 
 IF NOT EXISTS (
     SELECT * 
@@ -132,14 +113,14 @@ BEGIN
         nro_factura VARCHAR(20) CHECK(nro_factura > 0), 
 		tipo_factura CHAR(20),
 		fecha_emision DATETIME,
-		CAE CHAR(14), 
+		CAE CHAR(14),  --codigo unico que brinda ARCA para facturaciones electrónicas
 		estado CHAR(9) CHECK(estado in ('PENDIENTE', 'PAGADA', 'VENCIDA')), --estado de mayor longitud PENDIENTE -> 9 caracteres, el otro es Pagada
 		importe_total DECIMAL(8,2) CHECK (importe_total > 0),
-		razon_social_emisor CHAR(20),
-		CUIT_emisor BIGINT, 
-		vencimiento_CAE DATETIME,
-		id_socio INT,
-		anulada BIT NOT NULL DEFAULT 0,
+		razon_social_emisor CHAR(30) default ('Institución deportiva Sol Norte'),
+		CUIT_emisor BIGINT default (30678912345), --30 porque somos asociación jurídica, después el resto son dígitos random
+		vencimiento_CAE DATETIME, -- el cae tiene un vencimiento
+		id_socio INT, 
+		anulada BIT NOT NULL DEFAULT 0, -- solo como dato interno ante un alta mal hecho o cosas por el estilo
 		fecha_anulacion DATETIME,
 		FOREIGN KEY (id_socio) REFERENCES solNorte.socio(ID_socio) 
     );
@@ -380,3 +361,4 @@ BEGIN
     );
 END
 GO
+

@@ -1,9 +1,9 @@
 USE Com2900G10;
 GO
 
-
 CREATE OR ALTER PROCEDURE solNorte.CargarSociosMenores
-    @RutaArchivo VARCHAR(255)  
+    @RutaArchivo VARCHAR(255),
+    @NombreHoja VARCHAR(255)
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -27,11 +27,11 @@ BEGIN
             nro_responsable VARCHAR(255),
             nombre VARCHAR(255),
             apellido VARCHAR(255),
-            DNI VARCHAR(255),
+            DNI BIGINT, -- aca ocurre lo mismo que con telefno y telefono emergencia en la hoja de responsables de pago
             mail VARCHAR(255),
             fecha_nacimiento VARCHAR(255),
-            telefono_contacto VARCHAR(255),
-            telefono_emergencia VARCHAR(255),
+            telefono_contacto BIGINT,
+            telefono_emergencia BIGINT,
             nombre_obra_social VARCHAR(255),
             nro_obra_social VARCHAR(255),
             telefono_contacto_emergencia VARCHAR(255)
@@ -64,35 +64,16 @@ BEGIN
             borrado BIT
         );
 
-		--codificación latina, ANSI latin1 con codepage = 1252, asi evito problemas con tildes
-        DECLARE @SqlBulk NVARCHAR(MAX);
-        SET @SqlBulk = N'
-        BULK INSERT #temporal_GrupoFliar
-            FROM ''' + @RutaArchivo + '''
-            WITH (
-                FIELDTERMINATOR = '','',
-                ROWTERMINATOR = ''\n'',
-				CODEPAGE = ''1252'', 
-                FIRSTROW = 2
-            );';
-
-        EXEC sp_executesql @SqlBulk;
-
-		SELECT 'PRIMERO' as P, * FROM #temporal_GrupoFliar;
-
-        -- Evito las filas donde datos críticos no existan, luego de ser sanitizados
-        DELETE FROM #temporal_GrupoFliar
-        WHERE 
-            -- Campos obligatorios
-            LTRIM(RTRIM(ISNULL(nro_de_socio, ''))) = '' OR
-            LTRIM(RTRIM(ISNULL(nro_responsable, ''))) = '' OR
-            LTRIM(RTRIM(ISNULL(nombre, ''))) = '' OR
-            LTRIM(RTRIM(ISNULL(apellido, ''))) = '' OR
-            LTRIM(RTRIM(ISNULL(DNI, ''))) = '' OR
-            LTRIM(RTRIM(ISNULL(fecha_nacimiento, ''))) = '' OR
-            LTRIM(RTRIM(ISNULL(telefono_emergencia, ''))) = '';
-
-		SELECT 'SEGUNDO' as P, * FROM #temporal_GrupoFliar;
+        DECLARE @sql NVARCHAR(MAX);
+        SET @sql = N'
+        INSERT INTO #temporal_GrupoFliar
+        SELECT *
+        FROM OPENROWSET(
+            ''Microsoft.ACE.OLEDB.12.0'',
+            ''Excel 12.0;HDR=YES;IMEX=1;Database=' + @RutaArchivo + ''',
+            ''SELECT * FROM [' + @NombreHoja + '$]''
+        );';
+        EXEC sp_executesql @sql;
 
         INSERT INTO #temporal_socio (
             ID_socio,
@@ -148,8 +129,6 @@ BEGIN
             AND TRY_CONVERT(DATE, fecha_nacimiento, 101) IS NOT NULL
             AND telefono_emergencia IS NOT NULL;
 
-
-		SELECT 'TERCERO' as P, * FROM #temporal_socio;
 		-- busco en la tabla socio los socios responsables, para traer los datos necesarios y empezar a armar los registros para los socios menores
         UPDATE ts
         SET 
@@ -333,15 +312,18 @@ BEGIN
 END;
 GO
 
-DECLARE @RutaArchivoSociosMenores VARCHAR(255) = 'C:\tp-bda-grupo-10-unlam\importacion\grupofliar.csv';
+DECLARE @r VARCHAR(255) = 'C:\tp-bda-grupo-10-unlam\importacion\Datos socios.xlsx';
+DECLARE @h VARCHAR(255) = 'Grupo Familiar';
 EXEC solNorte.CargarSociosMenores 
-    @RutaArchivo = @RutaArchivoSociosMenores;
+    @RutaArchivo = @r,
+    @NombreHoja = @h;
 GO
 
-
+--MENORES insertados
 SELECT * FROM solNorte.socio s where s.id_responsable_a_cargo IS NOT NULL;
+GO
 
-
+-- Vemos los grupos familiares formados
 SELECT 
     s.id_grupo_familiar,
     STRING_AGG(CONCAT(s.nombre, ' ', s.apellido, ' (ID:', s.ID_socio, ')'), ', ') AS miembros,
@@ -350,7 +332,11 @@ FROM solNorte.socio s
 WHERE s.id_grupo_familiar IS NOT NULL
 GROUP BY s.id_grupo_familiar
 ORDER BY s.id_grupo_familiar;
+GO
 
+-- podemos ver que hay 2 mayores y 1 solo respnosable.
+SELECT * FROM solNorte.socio s WHERE s.id_grupo_familiar = 83;
+GO
 
 /*
 DELETE FROM solNorte.socio;

@@ -115,8 +115,8 @@ BEGIN
 		fecha_emision DATETIME,
 		CAE CHAR(14),  --codigo unico que brinda ARCA para facturaciones electrónicas
 		estado CHAR(9) CHECK(estado in ('PENDIENTE', 'PAGADA', 'VENCIDA')), --estado de mayor longitud PENDIENTE -> 9 caracteres, el otro es Pagada
-		importe_total DECIMAL(8,2) CHECK (importe_total > 0),
-		razon_social_emisor CHAR(30) default ('Institución deportiva Sol Norte'),
+		importe_total DECIMAL(10,2) CHECK (importe_total > 0.00),
+		razon_social_emisor CHAR(50) default ('Institución deportiva Sol Norte'),
 		CUIT_emisor BIGINT default (30678912345), --30 porque somos asociación jurídica, después el resto son dígitos random
 		vencimiento_CAE DATETIME, -- el cae tiene un vencimiento
 		id_socio INT, 
@@ -252,6 +252,11 @@ BEGIN
 		cantidad INT NOT NULL DEFAULT 1 CHECK(cantidad > 0),
 		subtotal DECIMAL (10,2) NOT NULL CHECK(subtotal > 0),
 		id_factura INT NOT NULL,
+		es_cuota BIT NOT NULL DEFAULT 0,
+		es_reserva_sum BIT NOT NULL DEFAULT 0,
+		es_entrada_pileta BIT NOT NULL DEFAULT 0,
+		es_actividad BIT NOT NULL DEFAULT 0,
+		id_item INT NOT NULL,
 		borrado BIT NOT NULL DEFAULT 0,
 		fecha_borrado DATETIME,
 		CONSTRAINT FK_id_factura FOREIGN KEY (id_factura) 

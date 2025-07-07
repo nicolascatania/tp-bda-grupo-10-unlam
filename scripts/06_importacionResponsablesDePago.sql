@@ -49,6 +49,9 @@ EXEC solNorte.CargarActividades
 GO
 
 
+SELECT * FROM solNorte.actividad;
+GO
+
 CREATE OR ALTER PROCEDURE solNorte.CargarSociosResponsables
     @RutaArchivo VARCHAR(255),
     @NombreHoja VARCHAR(255)

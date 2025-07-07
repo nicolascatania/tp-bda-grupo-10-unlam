@@ -74,11 +74,10 @@ GO
 
 DECLARE @fd DATE= '2024-01-01';
 DECLARE @fh DATE = '2024-12-31';
-
 EXEC rep.Reporte_SociosMorosos_XML
     @fecha_desde = @fd,
     @fecha_hasta = @fh;
-
+GO
 ----------------------------------------------------------------------------------------------------------------
 -- REPORTE 2: Ingresos Mensuales
 ----------------------------------------------------------------------------------------------------------------
@@ -173,7 +172,7 @@ END;
 GO
 
 EXEC rep.Reporte_Inasistencias_XML;
-
+GO
 ----------------------------------------------------------------------------------------------------------------
 -- REPORTE 4: Socios con Inasistencias
 ----------------------------------------------------------------------------------------------------------------
@@ -187,7 +186,7 @@ GO
 CREATE OR ALTER PROCEDURE rep.Reporte_SociosConInasistencias
 AS
 BEGIN
-	SET NOCOUNT ON; -- este a reviar. yo creo que esta bien, alcanza con evaluar una vez asistio = 0
+	SET NOCOUNT ON; 
 
     SELECT
         s.nombre,
@@ -210,3 +209,4 @@ GO
 
 
 EXEC rep.Reporte_SociosConInasistencias;
+GO

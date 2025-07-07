@@ -1323,7 +1323,7 @@
           </mxGeometry>
         </mxCell>
         <mxCell id="1iP3AuXeJ3t0hvu1TZbp-60" value="asociado" style="shape=rhombus;perimeter=rhombusPerimeter;whiteSpace=wrap;html=1;align=center;" parent="1" vertex="1">
-          <mxGeometry x="-850" y="710" width="120" height="60" as="geometry" />
+          <mxGeometry x="-850" y="760" width="120" height="60" as="geometry" />
         </mxCell>
         <mxCell id="1iP3AuXeJ3t0hvu1TZbp-61" value="" style="endArrow=none;html=1;rounded=0;" parent="1" source="1iP3AuXeJ3t0hvu1TZbp-60" target="3TNbEHUvv3k6rccCTDni-139" edge="1">
           <mxGeometry relative="1" as="geometry">
@@ -1495,7 +1495,7 @@
           </mxGeometry>
         </mxCell>
         <mxCell id="1iP3AuXeJ3t0hvu1TZbp-90" value="se corresponde" style="shape=rhombus;perimeter=rhombusPerimeter;whiteSpace=wrap;html=1;align=center;" parent="1" vertex="1">
-          <mxGeometry x="40" y="628" width="100" height="50" as="geometry" />
+          <mxGeometry x="50" y="628" width="100" height="50" as="geometry" />
         </mxCell>
         <mxCell id="1iP3AuXeJ3t0hvu1TZbp-91" value="" style="endArrow=none;html=1;rounded=0;" parent="1" source="C-vyLk0tnHw3VtMMgP7b-2" target="1iP3AuXeJ3t0hvu1TZbp-90" edge="1">
           <mxGeometry relative="1" as="geometry">

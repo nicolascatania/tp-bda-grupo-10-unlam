@@ -156,22 +156,23 @@ GO
 CREATE OR ALTER PROCEDURE rep.Reporte_Inasistencias_XML
 AS
 BEGIN
-	SET NOCOUNT ON;
+    SET NOCOUNT ON;
 
-	SELECT RTRIM(s.categoria_socio), RTRIM(a.nombre_actividad),
-		   COUNT(*) as cantidad_inasistencias
-	FROM solNorte.asistencia asi
-	INNER JOIN solNorte.inscripcion_actividad ia ON asi.id_inscripcion_actividad = ia.ID_inscripcion
-	INNER JOIN solNorte.socio s ON ia.id_socio = s.ID_socio
-	INNER JOIN solNorte.actividad a ON ia.id_actividad = a.ID_actividad
-	-- aca hay que usar el campo presentismo
-	WHERE asi.presentismo in ('A', 'J')
-		AND asi.borrado = 0
-		AND s.borrado = 0
-		AND a.borrado = 0
-	GROUP BY s.categoria_socio, a.nombre_actividad
-	ORDER BY cantidad_inasistencias DESC
-	FOR XML PATH('inasistencia'), ROOT('reporte_inasistencias');
+    SELECT 
+        RTRIM(s.categoria_socio) AS categoria_socio, 
+        RTRIM(a.nombre_actividad) AS nombre_actividad,
+        COUNT(*) AS cantidad_inasistencias
+    FROM solNorte.asistencia asi
+    INNER JOIN solNorte.inscripcion_actividad ia ON asi.id_inscripcion_actividad = ia.ID_inscripcion
+    INNER JOIN solNorte.socio s ON ia.id_socio = s.ID_socio
+    INNER JOIN solNorte.actividad a ON ia.id_actividad = a.ID_actividad
+    WHERE asi.presentismo IN ('A', 'J') 
+        AND asi.borrado = 0
+        AND s.borrado = 0
+        AND a.borrado = 0
+    GROUP BY RTRIM(s.categoria_socio), RTRIM(a.nombre_actividad)
+    ORDER BY cantidad_inasistencias DESC
+    FOR XML PATH('inasistencia'), ROOT('reporte_inasistencias');
 END;
 GO
 
@@ -196,8 +197,8 @@ BEGIN
         s.nombre,
         s.apellido,
         DATEDIFF(YEAR, s.fecha_nacimiento, GETDATE()) AS edad,
-        s.categoria_socio,
-        a.nombre_actividad
+        RTRIM(s.categoria_socio) AS categoria_socio,
+        RTRIM(a.nombre_actividad) AS nombre_actividad
     FROM solNorte.asistencia asi
     INNER JOIN solNorte.inscripcion_actividad ia ON asi.id_inscripcion_actividad = ia.ID_inscripcion
     INNER JOIN solNorte.socio s ON ia.id_socio = s.ID_socio

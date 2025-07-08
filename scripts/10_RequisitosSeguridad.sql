@@ -161,12 +161,12 @@ DENY DELETE ON solNorte.deuda TO rol_administrativo_cobranza;
 GRANT SELECT, UPDATE ON solNorte.deuda TO rol_administrativo_morosidad;
 GRANT SELECT ON solNorte.socio TO rol_administrativo_morosidad;
 GRANT SELECT ON solNorte.factura TO rol_administrativo_morosidad;
-GRANT EXECUTE ON solNorte./*AGREGAR SP CORRESPONDIENTE*/ TO rol_administrativo_morosidad;
+-- GRANT EXECUTE ON solNorte./*AGREGAR SP CORRESPONDIENTE*/ TO rol_administrativo_morosidad;
 
 GRANT SELECT, UPDATE ON solNorte.deuda TO rol_administrativo_morosidad;
 GRANT SELECT ON solNorte.socio TO rol_administrativo_morosidad;
 GRANT SELECT ON solNorte.factura TO rol_administrativo_morosidad;
-GRANT EXECUTE ON solNorte./*AGREGAR SP CORRESPONDIENTE*/ TO rol_administrativo_morosidad;
+-- GRANT EXECUTE ON solNorte./*AGREGAR SP CORRESPONDIENTE*/ TO rol_administrativo_morosidad;
 
 GRANT SELECT, INSERT, UPDATE ON solNorte.factura TO rol_administrativo_facturacion;
 GRANT SELECT, INSERT, UPDATE ON solNorte.detalle_factura TO rol_administrativo_facturacion;

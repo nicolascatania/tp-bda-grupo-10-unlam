@@ -544,8 +544,8 @@ GO
 CREATE OR ALTER PROCEDURE solNorte.insertar_actividad
 	@nombre_actividad CHAR(15),
     @costo_mensual DECIMAL(8,2),
-    @edad_minima INT,
-    @edad_maxima INT
+    @edad_minima INT = NULL,
+    @edad_maxima INT = NULL
 AS
 BEGIN
  IF @edad_minima > @edad_maxima

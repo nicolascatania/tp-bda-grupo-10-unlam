@@ -158,7 +158,7 @@ AS
 BEGIN
 	SET NOCOUNT ON;
 
-	SELECT s.categoria_socio, a.nombre_actividad,
+	SELECT RTRIM(s.categoria_socio), RTRIM(a.nombre_actividad),
 		   COUNT(*) as cantidad_inasistencias
 	FROM solNorte.asistencia asi
 	INNER JOIN solNorte.inscripcion_actividad ia ON asi.id_inscripcion_actividad = ia.ID_inscripcion

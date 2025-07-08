@@ -3,12 +3,14 @@ GO
 --=======================================================PRUEBAS PARA ALTA DE GRUPO FAMILIAR=======================================================--
 -- 1. alta valida
 DECLARE @id_nuevo INT;
+SELECT * FROM solNorte.grupo_familiar;
 EXEC solNorte.alta_grupo_familiar @cantidad_integrantes = 1, @ID_grupo_familiar = @id_nuevo OUTPUT;
 SELECT * FROM solNorte.grupo_familiar WHERE ID_grupo_familiar = @id_nuevo;
-
--- 2. error por cantidad 0
+-- 2. error por cantidad 0, esperamos un mensaje de error indicando dicha situacion
 EXEC solNorte.alta_grupo_familiar @cantidad_integrantes = 0, @ID_grupo_familiar = @id_nuevo OUTPUT;
+GO
 
+DELETE FROM solNorte.grupo_familiar;
 --=======================================================PRUEBAS PARA MODIFICAR GRUPO FAMILIAR=======================================================--
 -- 1. alta de integrante
 EXEC solNorte.modificar_grupo_familiar @ID_grupo_familiar = 1, @accion = 'ALTA';

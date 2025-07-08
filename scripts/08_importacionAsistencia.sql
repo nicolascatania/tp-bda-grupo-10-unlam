@@ -136,11 +136,12 @@ EXEC solNorte.CargarPresentismo
 GO
 
 
+--para crear inscripciones, tomamos la fecha mas antigua por persona por actividad y la tomamos como el día de inscripción de un socio a una actividad
+SELECT top 100  * FROM solNorte.inscripcion_actividad;
 
-SELECT * FROM solNorte.inscripcion_actividad;
 
-
-SELECT * FROM solNorte.asistencia;
+-- asistencias
+SELECT top 100  * FROM solNorte.asistencia;
 
 
 /**

@@ -30,14 +30,13 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    --facturas que no fueron pagadas entre fechas indicadas
-    WITH cte_morosidad AS (
-        SELECT
+    WITH facturas_morosas AS (
+        SELECT 
             f.id_socio,
             s.nombre,
             s.apellido,
-            FORMAT(f.fecha_emision, 'yyyy-MM') AS mes_incumplido --usar format? es cómo convert? se pierde eficiencia?
-        FROM solNorte.factura f										--YEAR(f.fecha_emision) AS anio_incumplido, MONTH(f.fecha_emision) AS mes_incumplido
+            FORMAT(f.fecha_emision, 'yyyy-MM') AS mes_incumplido
+        FROM solNorte.factura f
         INNER JOIN solNorte.socio s ON f.id_socio = s.ID_socio
         WHERE 
             f.fecha_emision BETWEEN @fecha_desde AND @fecha_hasta
@@ -45,34 +44,36 @@ BEGIN
             AND f.anulada = 0
             AND s.borrado = 0
     ),
-    
-    cte_listado AS (
+    morosidad_con_ranking AS (
         SELECT 
+            *,
+            COUNT(*) OVER (PARTITION BY id_socio) AS ranking_morosidad
+        FROM facturas_morosas
+    ),
+    morosos_filtrados AS (
+        SELECT DISTINCT 
             id_socio,
             nombre,
             apellido,
             mes_incumplido,
-            COUNT(*) OVER (PARTITION BY id_socio) AS total_moras
-        FROM cte_morosidad
+            ranking_morosidad
+        FROM morosidad_con_ranking
+        WHERE ranking_morosidad > 2
     )
-
-    -- Resultado final como XML
     SELECT
-        'Morosos Recurrentes' AS nombre_reporte,
         @fecha_desde AS periodo_desde,
         @fecha_hasta AS periodo_hasta,
         id_socio,
         nombre + ', ' + apellido AS nombre_apellido,
         mes_incumplido,
-        total_moras
-    FROM cte_listado
-    WHERE total_moras > 2
-    ORDER BY total_moras DESC, nombre_apellido
+        ranking_morosidad
+    FROM morosos_filtrados
+    ORDER BY ranking_morosidad DESC, nombre_apellido, mes_incumplido
     FOR XML PATH('moroso'), ROOT('MorososRecurrentes'), TYPE;
 END;
 GO
 
-DECLARE @fd DATE= '2024-01-01';
+DECLARE @fd DATE = '2024-01-01';
 DECLARE @fh DATE = '2024-12-31';
 EXEC rep.Reporte_SociosMorosos_XML
     @fecha_desde = @fd,
@@ -92,6 +93,7 @@ CREATE OR ALTER PROCEDURE rep.Reporte_IngresosMensuales_XML
 AS
 BEGIN
     SET NOCOUNT ON;
+    SET LANGUAGE Spanish;
 
     WITH ingresos AS (
         SELECT
@@ -117,26 +119,28 @@ BEGIN
             YEAR(f.fecha_emision),
             MONTH(f.fecha_emision),
             DATENAME(MONTH, f.fecha_emision)
-    ),
-    acumulado AS (
-        SELECT 
-            nombre_actividad,
-            SUM(ingreso_mensual) AS total_anual
-        FROM ingresos
-        GROUP BY nombre_actividad
     )
     SELECT 
-        i.nombre_actividad,
-        i.anio,
-        i.mes,
-        i.nombre_mes,
-        i.ingreso_mensual,
-        a.total_anual
-    FROM ingresos i
-    INNER JOIN acumulado a ON i.nombre_actividad = a.nombre_actividad
-    ORDER BY i.nombre_actividad, i.anio, i.mes
+        anio,
+        mes,
+        nombre_mes,
+        (
+            SELECT 
+                RTRIM(nombre_actividad),
+                ingreso_mensual
+            FROM ingresos i2
+            WHERE i2.anio = i1.anio AND i2.mes = i1.mes
+            FOR XML PATH('actividad'), TYPE
+        ) AS actividades
+    FROM ingresos i1
+    GROUP BY anio, mes, nombre_mes
+    ORDER BY anio, mes
     FOR XML PATH('mes'), ROOT('reporte_ingresos'), ELEMENTS;
 END;
+GO
+
+
+EXEC rep.Reporte_IngresosMensuales_XML;
 GO
 
 ----------------------------------------------------------------------------------------------------------------

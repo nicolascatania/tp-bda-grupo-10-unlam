@@ -11,17 +11,6 @@
 USE Com2900G10
 GO
 
-
-/*
-IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = 'import')
-BEGIN
-    DECLARE @sql NVARCHAR(MAX);
-    SET @sql = 'CREATE SCHEMA import';
-    EXEC sp_executesql @sql;
-END;
-GO */
-
-
 IF NOT EXISTS(SELECT * FROM INFORMATION_SCHEMA.TABLES 
 			WHERE TABLE_SCHEMA = 'solNorte' AND TABLE_NAME = 'clima')
 BEGIN
@@ -41,7 +30,6 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    -- 1. Crear staging temporal
     IF OBJECT_ID('tempdb..#Temporal_importar_clima') IS NOT NULL
         DROP TABLE #Temporal_importar_clima;
 
@@ -53,7 +41,7 @@ BEGIN
         viento_kmh DECIMAL(5,2)             -- wind_speed_10m (km/h)
     );
 
-    -- 2. BULK INSERT dinámico desde archivo CSV
+
     DECLARE @sql NVARCHAR(MAX) = '
     BULK INSERT #Temporal_importar_clima
     FROM ''' + @RutaArchivo + '''
@@ -67,7 +55,7 @@ BEGIN
 
     EXEC sp_executesql @sql;
     
-    -- 3. Insertar en tabla final agrupando por fecha (sin hora)
+    -- sacamos la hora, solo nos interesa la fecha
     INSERT INTO solNorte.clima (
         fecha,
         llovio,

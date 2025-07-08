@@ -110,7 +110,7 @@ BEGIN
 --esta tabla no lleva borrado porque no es legal modificarla
     CREATE TABLE solNorte.factura (
         ID_factura INT IDENTITY(1,1) PRIMARY KEY,
-        nro_factura VARCHAR(20) CHECK(nro_factura > 0), 
+        nro_factura VARCHAR(100), 
 		tipo_factura CHAR(20),
 		fecha_emision DATETIME,
 		CAE CHAR(14),  --codigo unico que brinda ARCA para facturaciones electrónicas
@@ -274,7 +274,7 @@ BEGIN
 	CREATE TABLE solNorte.descuento(
 		ID_descuento INT IDENTITY(1,1) PRIMARY KEY,
 		descripcion VARCHAR (70) NOT NULL,
-		tipo_descuento CHAR(30) NOT NULL CHECK(tipo_descuento IN ('INSCRIPCION_FAMILIAR', 'DESCUENTO_POR_MAS_DE_UNA_ACTIVIDAD')),  
+		tipo_descuento CHAR(50) NOT NULL CHECK(tipo_descuento IN ('INSCRIPCION_FAMILIAR', 'DESCUENTO_POR_MAS_DE_UNA_ACTIVIDAD')),  
 		porcentaje DECIMAL (3,2) NOT NULL CHECK(porcentaje > 0 AND porcentaje < 1), -- 0,06 0,90 0,50 y asi tomaran los valores
 		id_detalle_factura INT NOT NULL,
 		borrado BIT NOT NULL DEFAULT 0,

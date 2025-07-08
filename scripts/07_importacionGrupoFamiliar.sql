@@ -334,10 +334,6 @@ GROUP BY s.id_grupo_familiar
 ORDER BY s.id_grupo_familiar;
 GO
 
--- podemos ver que hay 2 mayores y 1 solo respnosable.
-SELECT * FROM solNorte.socio s WHERE s.id_grupo_familiar = 83;
-GO
-
 /*
 DELETE FROM solNorte.socio;
 DELETE FROM solNorte.grupo_familiar;

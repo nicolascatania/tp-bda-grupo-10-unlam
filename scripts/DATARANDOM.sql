@@ -4,7 +4,7 @@ GO
 CREATE OR ALTER PROCEDURE datosParaTest.crearFacturasParaEntradasPileta
 AS
 BEGIN
-	-- Tabla temporal para almacenar IDs de socios
+
 	IF OBJECT_ID('tempdb..#SociosActivos') IS NOT NULL 
 		DROP TABLE #SociosActivos;
 
@@ -169,7 +169,7 @@ END;
 GO
 
 EXEC datosParaTest.crearFacturasParaEntradasPileta;
-
+GO
 
 /*
 
@@ -196,9 +196,6 @@ DELETE FROM solNorte.factura;
 */
 
 
-SELECT * FROM solNorte.inscripcion_actividad
-ORDER BY id_socio, id_actividad;
-GO
 
 -- Para cada actividad del socio tomo el mes inicial, y desde ese mes inicial hasta el mes actual, genero facturas para esa actividad
 -- y si se puede, hacemos descuento por g familiar, y descuento por si hace mas de una actividad
@@ -236,6 +233,7 @@ BEGIN
     SELECT mes, anio, fecha FROM Meses
     OPTION (MAXRECURSION 24);
     
+
     -- Obtener socios responsables aleatorios
     SELECT 
         s.ID_socio,
@@ -306,8 +304,9 @@ BEGIN
                 CONCAT('FAC-', @anio, '-', FORMAT(@mes, '00'), '-', @idSocio),
                 'A',
                 @fechaFactura,
-                CONCAT('CAE', FORMAT(@fechaFactura, 'yyyyMMdd')),
-                0, -- Se actualizará después
+				1209381290, --cae random, no afecta la lógica de nuestro sistema debido al alcance del mismo,
+				'PAGADA',
+                0.01, -- Se actualizará después, ponemos este valor simbólico ya que establecimos un check para que la factura no pueda tener importe <= 0 
                 DATEADD(DAY, 10, @fechaFactura),
                 @idSocio
             );
@@ -315,10 +314,8 @@ BEGIN
             DECLARE @idFactura INT = SCOPE_IDENTITY();
             DECLARE @montoTotal DECIMAL(10,2) = 0;
             
-            -- Asignar de 1 a 3 actividades aleatorias al socio
             DECLARE @numActividades INT = 1 + ABS(CHECKSUM(NEWID())) % 3; -- Entre 1 y 3 actividades
             
-            -- Crear detalles de factura para cada actividad
             DECLARE @actividadCounter INT = 1;
             
             WHILE @actividadCounter <= @numActividades
@@ -354,7 +351,7 @@ BEGIN
                     SET @tieneDescuentoMultiActividad = 1;
                 END
                 
-                -- Crear detalle de factura
+
                 INSERT INTO solNorte.detalle_factura (
                     descripcion,
                     cantidad,
@@ -453,14 +450,16 @@ BEGIN
                          ' - Actividades: ', @numActividades, 
                          ' - Total: $', @montoTotal);
             
-            SET @contador = @contador + 1;
         END TRY
         BEGIN CATCH
             PRINT CONCAT('Error procesando mes ', @mes, '/', @anio, ': ', ERROR_MESSAGE());
         END CATCH
+
+		
+		SET @contador = @contador + 1;
     END
     
-    -- Limpiar tablas temporales
+
     DROP TABLE #Meses;
     DROP TABLE #SociosRandom;
     DROP TABLE #ActividadesRandom;
@@ -469,5 +468,225 @@ BEGIN
 END;
 GO
 
--- Ejecutar la generación de datos
+
 EXEC datosParaTest.generarFacturacionMensualRandom;
+GO
+
+
+
+--======================== generamos facturas mensuales asociadas a socio, algunas vencidas para poder generar el reporte 1 ========================--
+CREATE OR ALTER PROCEDURE solNorte.InsertarSociosYFacturasMensuales
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    DECLARE @MaxIDActual INT;
+    SELECT @MaxIDActual = ISNULL(MAX(ID_socio), 0) FROM solNorte.socio;
+
+    SET IDENTITY_INSERT solNorte.socio ON;
+
+    DECLARE @ID_base INT = CASE WHEN @MaxIDActual < 4120 THEN 4120 ELSE @MaxIDActual + 1 END;
+    DECLARE @anio INT = 2024;
+    DECLARE @mes_base INT = 1;
+    DECLARE @nombres TABLE(nombre VARCHAR(50), apellido VARCHAR(50));
+
+    INSERT INTO @nombres(nombre, apellido)
+    VALUES 
+    ('Juan', 'Pérez'), ('María', 'Gómez'), ('Lucas', 'Rodríguez'), ('Ana', 'Martínez'),
+    ('Sofía', 'López'), ('Pedro', 'García'), ('Lucía', 'Fernández'), ('Mateo', 'Ruiz'),
+    ('Valentina', 'Morales'), ('Diego', 'Romero'), ('Camila', 'Sánchez'), ('Tomás', 'Ortega'),
+    ('Martina', 'Torres'), ('Franco', 'Silva'), ('Renata', 'Flores'), ('Bruno', 'Castro'),
+    ('Carla', 'Méndez'), ('Nicolás', 'Herrera'), ('Isabel', 'Vega'), ('Julián', 'Ibáñez'),
+    ('Cecilia', 'Aguirre'), ('Felipe', 'Luna'), ('Sol', 'Domínguez'), ('Kevin', 'Mansilla'),
+    ('Florencia', 'Acosta');
+
+    DECLARE @i INT = 1;
+    WHILE @i <= 25
+    BEGIN
+        DECLARE @nombre VARCHAR(50), @apellido VARCHAR(50);
+        SELECT @nombre = nombre, @apellido = apellido FROM (
+            SELECT ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS rn, * FROM @nombres
+        ) AS nombres_indexed WHERE rn = @i;
+
+        DECLARE @id_socio INT = @ID_base + @i - 1;
+
+        INSERT INTO solNorte.socio (
+            ID_socio, nombre, apellido, fecha_nacimiento, DNI, telefono,
+            telefono_de_emergencia, obra_social, nro_obra_social,
+            categoria_socio, es_responsable, email
+        )
+        VALUES (
+            @id_socio, @nombre, @apellido, DATEFROMPARTS(1990 + (@i % 10), 1, 15),
+            40000000 + @i, '11234567' + RIGHT('00' + CAST(@i AS VARCHAR), 2),
+            NULL, NULL, NULL, 'MAYOR', 1, LOWER(@nombre + '.' + @apellido + '@mail.com')
+        );
+
+        -- Los primeros 10 socios van a tener facturas vencidas (algunos más que otros)
+        IF @i <= 10
+        BEGIN
+            DECLARE @cant_facturas INT = 2 + (@i % 6); -- 2 a 7 facturas vencidas
+
+            DECLARE @j INT = 0;
+            WHILE @j < @cant_facturas
+            BEGIN
+                DECLARE @mes_actual INT = ((@mes_base + @j - 1) % 12) + 1;
+                DECLARE @fecha DATETIME = DATEFROMPARTS(@anio, @mes_actual, 10);
+                DECLARE @nro_factura VARCHAR(30) = 'FAC-' + CAST(@anio AS VARCHAR) + '-' 
+                                                    + RIGHT('0' + CAST(@mes_actual AS VARCHAR), 2) + '-' 
+                                                    + CAST(@id_socio AS VARCHAR) + '-' + CAST(@j + 1 AS VARCHAR);
+
+                INSERT INTO solNorte.factura (
+                    nro_factura, tipo_factura, fecha_emision, CAE,
+                    estado, importe_total, vencimiento_CAE, id_socio
+                )
+                VALUES (
+                    @nro_factura, 'A', @fecha, '12345678901234',
+                    'VENCIDA', 1000.00, DATEADD(DAY, 30, @fecha), @id_socio
+                );
+
+                SET @j += 1;
+            END
+        END
+        ELSE
+        BEGIN
+            -- Resto con una sola factura PAGADA
+            DECLARE @fecha1 DATETIME = DATEFROMPARTS(@anio, 5, 10);
+            DECLARE @nro_factura1 VARCHAR(30) = 'FAC-' + CAST(@anio AS VARCHAR) + '-05-' + CAST(@id_socio AS VARCHAR);
+
+            INSERT INTO solNorte.factura (
+                nro_factura, tipo_factura, fecha_emision, CAE,
+                estado, importe_total, vencimiento_CAE, id_socio
+            )
+            VALUES (
+                @nro_factura1, 'B', @fecha1, '12345678900000',
+                'PAGADA', 1000.00, DATEADD(DAY, 30, @fecha1), @id_socio
+            );
+        END
+
+        SET @i += 1;
+    END
+
+    SET IDENTITY_INSERT solNorte.socio OFF;
+
+    DECLARE @NuevoMaxID INT;
+    SELECT @NuevoMaxID = MAX(ID_socio) FROM solNorte.socio;
+    
+    DBCC CHECKIDENT ('solNorte.socio', RESEED, @NuevoMaxID);
+
+    PRINT 'RESEED realizado. Nuevo valor de IDENTITY: ' + CAST(@NuevoMaxID AS VARCHAR);
+END;
+
+GO
+
+EXEC solNorte.InsertarSociosYFacturasMensuales;
+GO
+
+--======================== asociamos facturas mensuales al detalle que representa una cuota ========================--
+
+CREATE OR ALTER PROCEDURE solNorte.InsertarDetallesYCuotas
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    BEGIN TRY
+        IF OBJECT_ID('tempdb..#datos_procesados') IS NOT NULL DROP TABLE #datos_procesados;
+        IF OBJECT_ID('tempdb..#cuotas_generadas') IS NOT NULL DROP TABLE #cuotas_generadas;
+
+        CREATE TABLE #datos_procesados (
+            ID_factura INT,
+            id_socio INT,
+            mes TINYINT,
+            anio INT,
+            importe_total DECIMAL(10,2),
+            nombre_membresia CHAR(9),
+            edad_minima INT,
+            edad_maxima INT
+        );
+
+        CREATE TABLE #cuotas_generadas (
+            ID_cuota INT,
+            ID_factura INT
+        );
+
+        INSERT INTO #datos_procesados (ID_factura, id_socio, mes, anio, importe_total, nombre_membresia, edad_minima, edad_maxima)
+        SELECT
+            f.ID_factura,
+            f.id_socio,
+            MONTH(f.fecha_emision),
+            YEAR(f.fecha_emision),
+            f.importe_total,
+            CASE
+                WHEN DATEDIFF(YEAR, s.fecha_nacimiento, f.fecha_emision) < 13 THEN 'MENOR'
+                WHEN DATEDIFF(YEAR, s.fecha_nacimiento, f.fecha_emision) BETWEEN 13 AND 17 THEN 'CADETE'
+                ELSE 'MAYOR'
+            END,
+            CASE
+                WHEN DATEDIFF(YEAR, s.fecha_nacimiento, f.fecha_emision) < 13 THEN 0
+                WHEN DATEDIFF(YEAR, s.fecha_nacimiento, f.fecha_emision) BETWEEN 13 AND 17 THEN 13
+                ELSE 18
+            END,
+            CASE
+                WHEN DATEDIFF(YEAR, s.fecha_nacimiento, f.fecha_emision) < 13 THEN 12
+                WHEN DATEDIFF(YEAR, s.fecha_nacimiento, f.fecha_emision) BETWEEN 13 AND 17 THEN 17
+                ELSE 99
+            END
+        FROM solNorte.factura f
+        INNER JOIN solNorte.socio s ON f.id_socio = s.ID_socio
+        WHERE f.anulada = 0 AND s.borrado = 0;
+
+		DECLARE @tmp TABLE (
+			ID_cuota INT,
+			mes INT,
+			anio INT,
+			id_socio INT
+		);
+
+        -- Agregamos las cuotas membresía, me quedo con ID generado + ID_factura original
+       INSERT INTO solNorte.cuota_membresia (
+			mes, anio, monto, nombre_membresia, edad_minima, edad_maxima, id_socio
+		)
+		OUTPUT INSERTED.ID_cuota, INSERTED.mes, INSERTED.anio, INSERTED.id_socio INTO @tmp
+		SELECT
+			dp.mes, dp.anio, dp.importe_total,
+			dp.nombre_membresia, dp.edad_minima, dp.edad_maxima, dp.id_socio
+		FROM #datos_procesados dp;
+
+		-- Joins para cruzar los datos procesados en la temporal, obteniendo el id de la factura y la cuota, y asi terminar de generar la cuota memebresia
+		INSERT INTO #cuotas_generadas(ID_cuota, ID_factura)
+		SELECT
+			t.ID_cuota,
+			dp.ID_factura
+		FROM @tmp t
+		INNER JOIN #datos_procesados dp
+			ON t.mes = dp.mes
+			AND t.anio = dp.anio
+			AND t.id_socio = dp.id_socio;
+
+		-- Asocio los detalles a las cuotas membresias pra que figuren como los items
+		INSERT INTO solNorte.detalle_factura (
+			descripcion, cantidad, subtotal, id_factura,
+			es_cuota, es_reserva_sum, es_entrada_pileta, es_actividad,
+			id_item
+		)
+		SELECT
+			'Cuota de membresía mes ' + FORMAT(f.fecha_emision, 'MMMM yyyy'),
+			1,
+			f.importe_total,
+			f.ID_factura,
+			1, 0, 0, 0,
+			c.ID_cuota
+		FROM #cuotas_generadas c
+		INNER JOIN solNorte.factura f ON f.ID_factura = c.ID_factura;
+
+		PRINT 'Cuotas y detalles generados correctamente.';
+    END TRY
+    BEGIN CATCH
+        DECLARE @msg NVARCHAR(4000) = ERROR_MESSAGE();
+        RAISERROR('Error en InsertarDetallesYCuotas: %s', 16, 1, @msg);
+    END CATCH
+END;
+GO
+
+
+EXEC solNorte.InsertarDetallesYCuotas;
+GO

@@ -140,9 +140,9 @@ BEGIN
     SET NOCOUNT ON;
 
     --validar si socio ya se encuentra registrado
-    IF NOT EXISTS (SELECT 1 FROM solNorte.socio WHERE DNI = @DNI AND borrado = 0)
+    IF EXISTS (SELECT 1 FROM solNorte.socio WHERE DNI = @DNI AND borrado = 0)
     BEGIN
-        RAISERROR('El socio ya se encuentra registrado. DNI: %d', 16, 1, @DNI);
+        RAISERROR('El socio ya se encuentra registrado. DNI: %s', 16, 1, @DNI);
         RETURN;
     END
 

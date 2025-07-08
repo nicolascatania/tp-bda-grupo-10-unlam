@@ -90,6 +90,7 @@ CREATE LOGIN presidente WITH PASSWORD = 'Pr3s1d3nt3!2025' MUST_CHANGE, CHECK_POL
 CREATE LOGIN vicepresidente WITH PASSWORD = 'V1c3Pr3s!2025' MUST_CHANGE, CHECK_POLICY = ON, CHECK_EXPIRATION = ON;
 CREATE LOGIN secretario WITH PASSWORD = 'S3cr3t4r!@2025' MUST_CHANGE, CHECK_POLICY = ON, CHECK_EXPIRATION = ON;
 CREATE LOGIN vocales WITH PASSWORD = 'V0c4l3s!@2025' MUST_CHANGE, CHECK_POLICY = ON, CHECK_EXPIRATION = ON;
+GO
 
 --Creacion de roles por area
 CREATE ROLE rol_jefe_tesoreria;
@@ -102,22 +103,23 @@ CREATE ROLE rol_presidente;
 CREATE ROLE rol_vicepresidente;
 CREATE ROLE rol_secretario;
 CREATE ROLE rol_vocales;
+GO
 
 -- Asignacion de usuarios a roles
 CREATE USER user_jefe_tesoreria FOR LOGIN jefe_tesoreria;
 ALTER ROLE rol_jefe_tesoreria ADD MEMBER user_jefe_tesoreria;
 
-CREATE USER user_admin_cobranza FOR LOGIN administrativo_cobranza;
+CREATE USER user_administrativo_cobranza FOR LOGIN administrativo_cobranza;
 ALTER ROLE rol_administrativo_cobranza ADD MEMBER user_administrativo_cobranza;
 
-CREATE USER user_admin_morosidad FOR LOGIN administrativo_morosidad;
+CREATE USER user_administrativo_morosidad FOR LOGIN administrativo_morosidad;
 ALTER ROLE rol_administrativo_morosidad ADD MEMBER user_administrativo_morosidad;
 
-CREATE USER user_admin_facturacion FOR LOGIN administrativo_facturacion;
+CREATE USER user_administrativo_facturacion FOR LOGIN administrativo_facturacion;
 ALTER ROLE rol_administrativo_facturacion ADD MEMBER user_administrativo_facturacion;
 
-CREATE USER user_admin_socio FOR LOGIN administrativo_socio;
-ALTER ROLE rol_administrativo_socio ADD MEMBER user_admin_socio;
+CREATE USER user_administrativo_socio FOR LOGIN administrativo_socio;
+ALTER ROLE rol_administrativo_socio ADD MEMBER user_administrativo_socio;
 
 CREATE USER user_socios_web FOR LOGIN socios_web;
 ALTER ROLE rol_socios_web ADD MEMBER user_socios_web;
@@ -309,3 +311,140 @@ SELECT
     rol,
     area
 FROM personal.Empleado;
+
+
+
+
+
+/*
+USE Com2900G10;
+GO
+
+DELETE FROM personal.empleado;
+
+-- Usuarios de áreas
+IF EXISTS (SELECT 1 FROM sys.database_principals WHERE name = 'user_jefe_tesoreria')
+    DROP USER user_jefe_tesoreria;
+
+IF EXISTS (SELECT 1 FROM sys.database_principals WHERE name = 'user_admin_cobranza')
+    DROP USER user_admin_cobranza;
+
+IF EXISTS (SELECT 1 FROM sys.database_principals WHERE name = 'user_admin_morosidad')
+    DROP USER user_admin_morosidad;
+
+IF EXISTS (SELECT 1 FROM sys.database_principals WHERE name = 'user_admin_facturacion')
+    DROP USER user_admin_facturacion;
+
+IF EXISTS (SELECT 1 FROM sys.database_principals WHERE name = 'user_admin_socio')
+    DROP USER user_admin_socio;
+
+IF EXISTS (SELECT 1 FROM sys.database_principals WHERE name = 'user_socios_web')
+    DROP USER user_socios_web;
+
+IF EXISTS (SELECT 1 FROM sys.database_principals WHERE name = 'user_presidente')
+    DROP USER user_presidente;
+
+IF EXISTS (SELECT 1 FROM sys.database_principals WHERE name = 'user_vicepresidente')
+    DROP USER user_vicepresidente;
+
+IF EXISTS (SELECT 1 FROM sys.database_principals WHERE name = 'user_secretario')
+    DROP USER user_secretario;
+
+IF EXISTS (SELECT 1 FROM sys.database_principals WHERE name = 'user_vocales')
+    DROP USER user_vocales;
+
+-- Usuarios de desarrolladores
+IF EXISTS (SELECT 1 FROM sys.database_principals WHERE name = 'leonel')
+    DROP USER leonel;
+
+IF EXISTS (SELECT 1 FROM sys.database_principals WHERE name = 'nicolas')
+    DROP USER nicolas;
+
+IF EXISTS (SELECT 1 FROM sys.database_principals WHERE name = 'iara')
+    DROP USER iara;
+
+IF EXISTS (SELECT 1 FROM sys.database_principals WHERE name = 'ignacio')
+    DROP USER ignacio;
+
+-- Roles definidos
+IF EXISTS (SELECT 1 FROM sys.database_principals WHERE name = 'rol_jefe_tesoreria')
+    DROP ROLE rol_jefe_tesoreria;
+
+IF EXISTS (SELECT 1 FROM sys.database_principals WHERE name = 'rol_administrativo_cobranza')
+    DROP ROLE rol_administrativo_cobranza;
+
+IF EXISTS (SELECT 1 FROM sys.database_principals WHERE name = 'rol_administrativo_morosidad')
+    DROP ROLE rol_administrativo_morosidad;
+
+IF EXISTS (SELECT 1 FROM sys.database_principals WHERE name = 'rol_administrativo_facturacion')
+    DROP ROLE rol_administrativo_facturacion;
+
+IF EXISTS (SELECT 1 FROM sys.database_principals WHERE name = 'rol_administrativo_socio')
+    DROP ROLE rol_administrativo_socio;
+
+IF EXISTS (SELECT 1 FROM sys.database_principals WHERE name = 'rol_socios_web')
+    DROP ROLE rol_socios_web;
+
+IF EXISTS (SELECT 1 FROM sys.database_principals WHERE name = 'rol_presidente')
+    DROP ROLE rol_presidente;
+
+IF EXISTS (SELECT 1 FROM sys.database_principals WHERE name = 'rol_vicepresidente')
+    DROP ROLE rol_vicepresidente;
+
+IF EXISTS (SELECT 1 FROM sys.database_principals WHERE name = 'rol_secretario')
+    DROP ROLE rol_secretario;
+
+IF EXISTS (SELECT 1 FROM sys.database_principals WHERE name = 'rol_vocales')
+    DROP ROLE rol_vocales;
+
+-- Cambiar al contexto master para eliminar logins
+USE [master];
+GO
+
+-- Logins de áreas
+IF EXISTS (SELECT 1 FROM sys.server_principals WHERE name = 'jefe_tesoreria')
+    DROP LOGIN jefe_tesoreria;
+
+IF EXISTS (SELECT 1 FROM sys.server_principals WHERE name = 'administrativo_cobranza')
+    DROP LOGIN administrativo_cobranza;
+
+IF EXISTS (SELECT 1 FROM sys.server_principals WHERE name = 'administrativo_morosidad')
+    DROP LOGIN administrativo_morosidad;
+
+IF EXISTS (SELECT 1 FROM sys.server_principals WHERE name = 'administrativo_facturacion')
+    DROP LOGIN administrativo_facturacion;
+
+IF EXISTS (SELECT 1 FROM sys.server_principals WHERE name = 'administrativo_socio')
+    DROP LOGIN administrativo_socio;
+
+IF EXISTS (SELECT 1 FROM sys.server_principals WHERE name = 'socios_web')
+    DROP LOGIN socios_web;
+
+IF EXISTS (SELECT 1 FROM sys.server_principals WHERE name = 'presidente')
+    DROP LOGIN presidente;
+
+IF EXISTS (SELECT 1 FROM sys.server_principals WHERE name = 'vicepresidente')
+    DROP LOGIN vicepresidente;
+
+IF EXISTS (SELECT 1 FROM sys.server_principals WHERE name = 'secretario')
+    DROP LOGIN secretario;
+
+IF EXISTS (SELECT 1 FROM sys.server_principals WHERE name = 'vocales')
+    DROP LOGIN vocales;
+
+-- Logins de devs
+IF EXISTS (SELECT 1 FROM sys.server_principals WHERE name = 'leonel')
+    DROP LOGIN leonel;
+
+IF EXISTS (SELECT 1 FROM sys.server_principals WHERE name = 'nicolas')
+    DROP LOGIN nicolas;
+
+IF EXISTS (SELECT 1 FROM sys.server_principals WHERE name = 'iara')
+    DROP LOGIN iara;
+
+IF EXISTS (SELECT 1 FROM sys.server_principals WHERE name = 'ignacio')
+    DROP LOGIN ignacio;
+
+
+
+*/

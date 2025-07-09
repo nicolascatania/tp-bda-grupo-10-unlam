@@ -1,0 +1,87 @@
+<?xml version="1.0"?>
+<SqlWorkbenchSqlProject xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" Name="GRUPO10">
+  <Items>
+    <LogicalFolder Name="Connections" Type="2" Sorted="true">
+      <Items />
+    </LogicalFolder>
+    <LogicalFolder Name="Queries" Type="0" Sorted="true">
+      <Items>
+        <FileNode Name="01_creacionBD.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>01_creacionBD.sql</FullPath>
+        </FileNode>
+        <FileNode Name="02_CreacionTablas.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>02_CreacionTablas.sql</FullPath>
+        </FileNode>
+        <FileNode Name="03_CreacionStoredProcedures.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>03_CreacionStoredProcedures.sql</FullPath>
+        </FileNode>
+        <FileNode Name="04_script_pruebas.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>04_script_pruebas.sql</FullPath>
+        </FileNode>
+        <FileNode Name="05_importacionClima.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>05_importacionClima.sql</FullPath>
+        </FileNode>
+        <FileNode Name="06_importacionResponsablesDePago.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>06_importacionResponsablesDePago.sql</FullPath>
+        </FileNode>
+        <FileNode Name="07_importacionGrupoFamiliar.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>07_importacionGrupoFamiliar.sql</FullPath>
+        </FileNode>
+        <FileNode Name="08_importacionAsistencia.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>08_importacionAsistencia.sql</FullPath>
+        </FileNode>
+        <FileNode Name="09_generacionLotesPrueba.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>09_generacionLotesPrueba.sql</FullPath>
+        </FileNode>
+        <FileNode Name="10_reportes.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>10_reportes.sql</FullPath>
+        </FileNode>
+        <FileNode Name="11_RequisitosSeguridad.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>11_RequisitosSeguridad.sql</FullPath>
+        </FileNode>
+        <FileNode Name="12_consulta_api.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>12_consulta_api.sql</FullPath>
+        </FileNode>
+      </Items>
+    </LogicalFolder>
+    <LogicalFolder Name="Miscellaneous" Type="3" Sorted="true">
+      <Items />
+    </LogicalFolder>
+  </Items>
+</SqlWorkbenchSqlProject>

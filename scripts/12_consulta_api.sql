@@ -1,3 +1,14 @@
+/*
+====================================================================================
+ Archivo		: 12_consulta_api.sql
+ Proyecto		: Institución Deportiva Sol Norte.
+ Descripción	: Script para carga de datos de clima mediante petición a API open-meteo.
+ Autor			: G10
+ Fecha entrega	: 2025-07-11
+====================================================================================
+*/
+
+
 /*Este script contiene la creacion de la tabla clima_diario, en ella guardaremos el resultado de consumir la API Open-Meteo.
 De esta manera podemos saber para una fecha y ubicacion especifica si llovio o no; esto nos asegura confiabilidad en los datos
 y nos permite gestionar los reembolsos correspondiente segun la regla de negocio.*/

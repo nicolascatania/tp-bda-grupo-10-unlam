@@ -1,3 +1,13 @@
+/*
+====================================================================================
+ Archivo		: 07_importacionGrupoFamiliar.sql
+ Proyecto		: Institución Deportiva Sol Norte.
+ Descripción	: Script para importacion de datos de Grupo Familiar desde .xlsx .
+ Autor			: G10
+ Fecha entrega	: 2025-07-11
+====================================================================================
+*/
+
 USE Com2900G10;
 GO
 

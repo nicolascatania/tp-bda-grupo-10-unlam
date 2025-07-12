@@ -1,3 +1,14 @@
+/*
+====================================================================================
+ Archivo		: 01_creacionBD.sql
+ Proyecto		: Institución Deportiva Sol Norte.
+ Descripción	: Script para creacion de la base de datos y esquemas.
+ Autor			: G10
+ Fecha entrega	: 2025-07-11
+====================================================================================
+*/
+
+
 IF NOT EXISTS (
     SELECT name 
     FROM sys.databases 

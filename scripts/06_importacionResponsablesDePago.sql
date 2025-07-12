@@ -1,3 +1,13 @@
+/*
+====================================================================================
+ Archivo		: 06_importacionResponsablesDePago.sql
+ Proyecto		: Institución Deportiva Sol Norte.
+ Descripción	: Script para importacion de datos de responsables de pago desde xlsx.
+ Autor			: G10
+ Fecha entrega	: 2025-07-11
+====================================================================================
+*/
+
 --probando ole db
 
 -- deben setearse estas opciones para poder usar objetos OLE, que permiten interactuar con archvios xlsx.

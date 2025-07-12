@@ -1,3 +1,13 @@
+/*
+====================================================================================
+ Archivo		: 08_importacionAsistencia.sql
+ Proyecto		: Institución Deportiva Sol Norte.
+ Descripción	: Script para importacion de datos de Asistencia desde .xlsx .
+ Autor			: G10
+ Fecha entrega	: 2025-07-11
+====================================================================================
+*/
+
 USE Com2900G10;
 GO
 

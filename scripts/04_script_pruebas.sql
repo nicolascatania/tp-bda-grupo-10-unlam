@@ -1,3 +1,13 @@
+/*
+====================================================================================
+ Archivo		: 04_script_pruebas.sql
+ Proyecto		: Institución Deportiva Sol Norte.
+ Descripción	: Script para generación de casos de prueba para los SP creados.
+ Autor			: G10
+ Fecha entrega	: 2025-07-11
+====================================================================================
+*/
+
 USE Com2900G10
 GO
 --=======================================================PRUEBAS PARA ALTA DE GRUPO FAMILIAR=======================================================--

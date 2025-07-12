@@ -1,3 +1,13 @@
+/*
+====================================================================================
+ Archivo		: 09_generacionLotesPrueba.sql
+ Proyecto		: Institución Deportiva Sol Norte.
+ Descripción	: Script para generacion de registros para poblar las tablas utilizadas por los reportes del siguiente script.
+ Autor			: G10
+ Fecha entrega	: 2025-07-11
+====================================================================================
+*/
+
 USE Com2900G10;
 GO
 

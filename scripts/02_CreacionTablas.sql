@@ -1,3 +1,12 @@
+/*
+====================================================================================
+ Archivo		: 02_CreacionTablas.sql
+ Proyecto		: Institución Deportiva Sol Norte.
+ Descripción	: Script para creación de tablas.
+ Autor			: G10
+ Fecha entrega	: 2025-07-11
+====================================================================================
+*/
 
 USE Com2900G10;
 GO

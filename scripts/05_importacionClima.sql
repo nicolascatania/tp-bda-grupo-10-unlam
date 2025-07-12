@@ -1,10 +1,10 @@
 /*
 ====================================================================================
- Archivo		: Importacion.sql
+ Archivo		: 05_importacionClima.sql
  Proyecto		: Institución Deportiva Sol Norte.
- Descripción	: Scripts para importar datos a las tablas desde csv.
+ Descripción	: Script para importar datos a las tablas desde .xlsx y .csv .
  Autor			: G10
- Fecha entrega	: 2025-07-01
+ Fecha entrega	: 2025-07-11
 ====================================================================================
 */
 

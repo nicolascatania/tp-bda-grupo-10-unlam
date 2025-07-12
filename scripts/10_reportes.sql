@@ -1,10 +1,10 @@
 /*
 ====================================================================================
- Archivo		: Reportes.sql
+ Archivo		: 10_reportes.sql
  Proyecto		: Institución Deportiva Sol Norte.
- Descripción	: Scripts para generar reportes.
+ Descripción	: Script para generar reportes en XML.
  Autor			: G10
- Fecha entrega	: 2025-07-01
+ Fecha entrega	: 2025-07-11
 ====================================================================================
 */
 

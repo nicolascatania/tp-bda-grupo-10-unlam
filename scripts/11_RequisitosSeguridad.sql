@@ -2,9 +2,9 @@
 ====================================================================================
  Archivo		: RquisitosSeguridad.sql
  Proyecto		: Institución Deportiva Sol Norte.
- Descripción	: Scripts para protección de datos sensibles de los empleados registrados en la base de datos.
+ Descripción	: Script de encriptación de datos sensibles, creacion de users y logins, y asignacion de permisos.
  Autor			: G10
- Fecha entrega	: 2025-07-01
+ Fecha entrega	: 2025-07-11
 ====================================================================================
 */
 USE Com2900G10;

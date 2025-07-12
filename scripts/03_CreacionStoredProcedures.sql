@@ -1,3 +1,13 @@
+/*
+====================================================================================
+ Archivo		: 03_CreacionStoredProcedures.sql
+ Proyecto		: Institución Deportiva Sol Norte.
+ Descripción	: Script para creación de SP de ABM para tablas correspondientes.
+ Autor			: G10
+ Fecha entrega	: 2025-07-11
+====================================================================================
+*/
+
 USE Com2900G10;
 GO
 
